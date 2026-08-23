@@ -2,14 +2,15 @@ import Foundation
 
 /// Drops contacts too large to be a fingertip.
 ///
-/// The panel reports a contact patch width and height on a 0...10 scale
-/// (HID digitizer usages 0x52 and 0x53), which is exactly what distinguishes a
-/// fingertip from the heel of a hand. It matters more here than on a laptop
-/// trackpad: a 32:9 strip usually sits low and flat on the desk, right where a wrist
-/// or forearm naturally comes to rest while typing.
+/// Only usable on panels that report a contact patch size (HID digitizer usages 0x48
+/// Width and 0x49 Height). **The Corsair Xeneon Edge does not**: its finger
+/// collections carry Tip Switch, Contact Identifier, X and Y, and nothing more — so
+/// on that panel this filter is inert and every contact is accepted.
 ///
-/// Firmware that reports no size at all sends zeroes, and those contacts are always
-/// accepted — silently rejecting every touch would be far worse than not filtering.
+/// It is kept because the driver targets a family of panels sharing one controller,
+/// and a panel that does report size gets the benefit. Contacts reporting no size are
+/// always accepted: silently rejecting every touch would be far worse than not
+/// filtering at all.
 public struct PalmFilter: Equatable, Sendable {
     public var isEnabled: Bool
     /// Largest patch dimension still treated as a finger, on the panel's 0...10 scale.

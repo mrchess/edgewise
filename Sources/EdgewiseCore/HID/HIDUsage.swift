@@ -14,8 +14,16 @@ public enum HIDUsage {
     public static let tipSwitch    = 0x42
     public static let contactID    = 0x51
     public static let contactCount = 0x54
-    public static let contactWidth  = 0x52
-    public static let contactHeight = 0x53
+    /// Contact patch size. Present in the usage tables, but *not* reported by the
+    /// Xeneon Edge — its finger collections carry only Tip Switch, Contact
+    /// Identifier, X and Y.
+    public static let contactWidth  = 0x48
+    public static let contactHeight = 0x49
+    /// Device Configuration feature report fields. These are 0x52/0x53 — easily
+    /// mistaken for per-contact size, because they appear alongside the input
+    /// elements when enumerating, but they are host-writable settings, not touch data.
+    public static let deviceMode       = 0x52
+    public static let deviceIdentifier = 0x53
     /// Button
     public static let button1 = 0x01
 }

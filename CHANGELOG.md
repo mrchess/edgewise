@@ -14,11 +14,13 @@ see [README](README.md#what-was-taken-from-where) for what came from where.
 
 - Tap to click at the touched point, press-and-hold to right-click, drag,
   two-finger scroll, and pinch to zoom.
+- Multi-finger gestures are implemented and tested but inert on the Xeneon Edge, which
+  only transmits on its mouse-emulation interface. See README.
 - Momentum scrolling: a flick coasts and decelerates rather than stopping dead.
   Scroll events carry proper phase and momentum tags, so apps rubber-band correctly.
 - Two-finger tap to right-click, the trackpad convention.
-- Palm rejection using the contact patch size the panel reports, so a resting wrist
-  does not register as a touch.
+- Palm rejection for panels that report contact size. Off by default — the Xeneon Edge
+  does not report it, so it has no effect there.
 - Double-tap registers as a double-click.
 - Pinch is delivered either as a real trackpad magnify gesture or as command-scroll,
   selectable in settings.

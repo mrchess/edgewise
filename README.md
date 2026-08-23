@@ -8,10 +8,10 @@ other panels built on the same WCH touch controller.
 | Tap | Click, exactly where you touched |
 | Press and hold | Right-click |
 | Drag | Press, move, release |
-| Two fingers | Scroll, with momentum |
-| Two-finger tap | Right-click |
-| Pinch | Zoom |
 | Double-tap | Double-click |
+
+Multi-finger gestures — two-finger scroll, two-finger tap, pinch — are implemented and
+tested, but **do not currently work on the Xeneon Edge**. See below.
 
 Plus a mode that posts taps straight to the app under your finger, so your cursor never
 leaves the main display at all.
@@ -29,6 +29,26 @@ and you can revoke it there. To uninstall, drag the app to the Trash.
 ## Requirements
 
 macOS 13 or later. Universal binary — Apple Silicon and Intel.
+
+## Multi-finger gestures do not work on the Xeneon Edge yet
+
+The panel ships a complete ten-finger digitizer interface in its HID descriptor, and
+also a mouse-emulation interface describing a single pointer. In practice it only ever
+transmits on the mouse interface: across thousands of captured reports, the digitizer
+sent nothing.
+
+It declares the standard Device Configuration feature report (usage 0x0D/0x0E, report
+ID 0x21) whose Device Mode field is how Windows switches such a device into multi-touch.
+Writing 2 to it returns success and changes nothing — reading the report back shows the
+mode unchanged, and the digitizer stays silent.
+
+The remaining candidate is the panel's vendor-defined interface (usage page 0xFF0A, a
+64-byte command pipe), which is almost certainly how iCUE drives it on Windows.
+Identifying the command would mean capturing that traffic on a Windows machine.
+
+Until then Edgewise falls back to the mouse interface, which is what makes tap, drag,
+double-tap and press-and-hold work. The gesture recogniser handles multiple contacts
+and is unit-tested for them, so the day the digitizer reports, they work.
 
 ## Credits
 
@@ -55,7 +75,6 @@ Everything is in the app's settings. The underlying file lives at
 | Drag threshold | 4pt | How far a finger moves before a tap becomes a drag |
 | Two-finger scroll | on | Natural direction by default |
 | Momentum | on | Flick and it coasts |
-| Palm rejection | on | Ignores contacts larger than a fingertip |
 | Pinch to zoom | on | `magnify` gesture, or `commandScroll` for maximum compatibility |
 | Display | auto | Pin the panel explicitly if detection picks wrong |
 

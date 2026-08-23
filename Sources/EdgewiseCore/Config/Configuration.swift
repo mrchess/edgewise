@@ -10,8 +10,9 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var gesture = GestureConfiguration()
 
     /// Remembered so the right display is found again after a replug or reorder.
-    /// Ignore contacts too large to be a fingertip — a resting wrist or forearm.
-    public var palmRejectionEnabled: Bool = true
+    /// Ignore contacts too large to be a fingertip. Off by default: it needs a panel
+    /// that reports contact size, which the Xeneon Edge does not.
+    public var palmRejectionEnabled: Bool = false
     /// Largest contact patch still treated as a finger, on the panel's 0...10 scale.
     public var maximumContactSize: Int = 6
 

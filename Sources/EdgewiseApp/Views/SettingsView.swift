@@ -27,8 +27,9 @@ struct SettingsView: View {
                     get: { driver.configuration.palmRejectionEnabled },
                     set: { driver.configuration.palmRejectionEnabled = $0 }))
                 .help("""
-                Ignores contacts too large to be a fingertip, so a resting wrist \
-                does not register as a touch.
+                Ignores contacts too large to be a fingertip. Requires a panel that \
+                reports contact size — the Xeneon Edge does not, so this has no \
+                effect on it.
                 """)
 
                 Picker("Display", selection: Binding(
