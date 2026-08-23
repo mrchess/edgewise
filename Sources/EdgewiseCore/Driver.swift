@@ -15,6 +15,15 @@ public final class Driver {
     }
     public var onStatusChange: ((Status) -> Void)?
 
+    /// Whether the panel actually delivers multiple contacts.
+    ///
+    /// Not a static property of the driver: the Xeneon Edge describes a ten-finger
+    /// digitizer but only ever transmits on its mouse-emulation interface, so the
+    /// answer is only known once it has reported something. Settings that depend on it
+    /// stay hidden until then, rather than offering controls that cannot act.
+    public private(set) var supportsMultipleContacts = false
+    public var onMultiContactAvailable: (() -> Void)?
+
     private let monitor: HIDMonitor
     private var recognizer: GestureRecognizer
     private var sink: EventSink
@@ -68,6 +77,11 @@ public final class Driver {
         }
 
         monitor.onFrame = { [weak self] frame in self?.handle(frame) }
+        monitor.onMultiContactAvailable = { [weak self] in
+            guard let self, !self.supportsMultipleContacts else { return }
+            self.supportsMultipleContacts = true
+            self.onMultiContactAvailable?()
+        }
         monitor.onDisconnect = { [weak self] in self?.handleDisconnect() }
 
         do {

@@ -10,6 +10,9 @@ import Foundation
 @MainActor
 final class DriverController: ObservableObject {
     @Published private(set) var status: Driver.Status = .stopped
+    /// False until the panel actually sends a multi-contact report. See
+    /// `Driver.supportsMultipleContacts`.
+    @Published private(set) var supportsMultipleContacts = false
     @Published var configuration: Configuration {
         didSet {
             // Ignore writes that change nothing.
@@ -51,6 +54,9 @@ final class DriverController: ObservableObject {
         let driver = Driver(configuration: configuration)
         driver.onStatusChange = { [weak self] status in
             Task { @MainActor in self?.status = status }
+        }
+        driver.onMultiContactAvailable = { [weak self] in
+            Task { @MainActor in self?.supportsMultipleContacts = true }
         }
         self.driver = driver
         driver.start()

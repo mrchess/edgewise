@@ -66,6 +66,10 @@ public final class HIDMonitor {
     /// Set once the digitizer sends anything, after which the mouse interface — which
     /// describes the same finger as a single pointer — is ignored as a duplicate.
     private var hasSeenDigitizerData = false
+
+    /// Called the first time the digitizer reports, i.e. when multi-finger gestures
+    /// become possible. On a panel stuck in mouse emulation it never fires.
+    public var onMultiContactAvailable: (() -> Void)?
     private let panels: [TouchPanel]
     private let clock: @Sendable () -> TimeInterval
 
@@ -237,7 +241,10 @@ public final class HIDMonitor {
         let digitizer = isDigitizer(device)
         HIDTrace.sampled("hid digitizer=\(digitizer)")
         if digitizer {
-            if !hasSeenDigitizerData { HIDTrace.log("digitizer is now reporting") }
+            if !hasSeenDigitizerData {
+                HIDTrace.log("digitizer is now reporting")
+                onMultiContactAvailable?()
+            }
             hasSeenDigitizerData = true
         } else if hasSeenDigitizerData {
             return

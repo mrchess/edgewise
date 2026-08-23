@@ -89,42 +89,35 @@ struct SettingsView: View {
                     }
                 }
 
-                Toggle("Two-finger tap to right-click", isOn: Binding(
-                    get: { driver.configuration.gesture.twoFingerTapRightClick },
-                    set: { driver.configuration.gesture.twoFingerTapRightClick = $0 }))
+                if driver.supportsMultipleContacts {
+                    Toggle("Two-finger tap to right-click", isOn: Binding(
+                        get: { driver.configuration.gesture.twoFingerTapRightClick },
+                        set: { driver.configuration.gesture.twoFingerTapRightClick = $0 }))
 
-                Toggle("Two-finger scroll", isOn: Binding(
-                    get: { driver.configuration.gesture.scrollEnabled },
-                    set: { driver.configuration.gesture.scrollEnabled = $0 }))
+                    Toggle("Two-finger scroll", isOn: Binding(
+                        get: { driver.configuration.gesture.scrollEnabled },
+                        set: { driver.configuration.gesture.scrollEnabled = $0 }))
 
-                if driver.configuration.gesture.scrollEnabled {
-                    Toggle("Keep scrolling after a flick", isOn: Binding(
-                        get: { driver.configuration.gesture.momentumEnabled },
-                        set: { driver.configuration.gesture.momentumEnabled = $0 }))
-                }
-
-                if driver.configuration.gesture.scrollEnabled {
-                    Toggle("Natural scrolling direction", isOn: Binding(
-                        get: { driver.configuration.gesture.naturalScrolling },
-                        set: { driver.configuration.gesture.naturalScrolling = $0 }))
-                }
-
-                Toggle("Pinch to zoom", isOn: Binding(
-                    get: { driver.configuration.gesture.pinchEnabled },
-                    set: { driver.configuration.gesture.pinchEnabled = $0 }))
-
-                if driver.configuration.gesture.pinchEnabled {
-                    Picker("Zoom using", selection: Binding(
-                        get: { driver.configuration.pinchDelivery },
-                        set: { driver.configuration.pinchDelivery = $0; driver.restart() })) {
-                        Text("Trackpad zoom gesture").tag(PinchDelivery.magnify)
-                        Text("Command-scroll").tag(PinchDelivery.commandScroll)
+                    if driver.configuration.gesture.scrollEnabled {
+                        Toggle("Keep scrolling after a flick", isOn: Binding(
+                            get: { driver.configuration.gesture.momentumEnabled },
+                            set: { driver.configuration.gesture.momentumEnabled = $0 }))
+                        Toggle("Natural scrolling direction", isOn: Binding(
+                            get: { driver.configuration.gesture.naturalScrolling },
+                            set: { driver.configuration.gesture.naturalScrolling = $0 }))
                     }
-                    Text(driver.configuration.pinchDelivery == .magnify
-                         ? "Smoothest in Preview, Photos, Maps and Safari."
-                         : "Works almost everywhere, but zooms in steps.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+
+                    Toggle("Pinch to zoom", isOn: Binding(
+                        get: { driver.configuration.gesture.pinchEnabled },
+                        set: { driver.configuration.gesture.pinchEnabled = $0 }))
+                } else {
+                    Text("""
+                    This panel reports one finger at a time, so two-finger scroll, \
+                    two-finger tap and pinch are unavailable. It describes a ten-finger \
+                    digitizer but never transmits on it — see the project page for why.
+                    """)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
             }
 
