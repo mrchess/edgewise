@@ -18,9 +18,15 @@ final class Permissions: ObservableObject {
 
     init() { refresh() }
 
+    /// Polled once a second, so it only publishes when something actually changed —
+    /// `@Published` fires on every assignment, equal or not, and a needless render
+    /// pass every second is enough to keep the whole view graph churning.
     func refresh() {
-        hasAccessibility = AXIsProcessTrusted()
-        hasInputMonitoring = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+        let accessibility = AXIsProcessTrusted()
+        if accessibility != hasAccessibility { hasAccessibility = accessibility }
+
+        let input = IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+        if input != hasInputMonitoring { hasInputMonitoring = input }
     }
 
     /// Poll while onboarding is visible so the UI reflects reality without a relaunch.

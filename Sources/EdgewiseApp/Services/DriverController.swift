@@ -11,7 +11,17 @@ import Foundation
 final class DriverController: ObservableObject {
     @Published private(set) var status: Driver.Status = .stopped
     @Published var configuration: Configuration {
-        didSet { applyAndPersist() }
+        didSet {
+            // Ignore writes that change nothing.
+            //
+            // SwiftUI writes back through bindings during view evaluation —
+            // `MenuBarExtra(isInserted:)` does it on every pass. Without this guard
+            // each of those no-op writes saved the file and republished, which
+            // invalidated the view that had just written, and the app live-locked in
+            // an endless render loop.
+            guard configuration != oldValue else { return }
+            applyAndPersist()
+        }
     }
 
     private var driver: Driver?

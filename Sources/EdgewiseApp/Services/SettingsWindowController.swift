@@ -37,6 +37,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        DebugLog.write("window shown: visible=\(window.isVisible) frame=\(window.frame)")
     }
 
     /// Keep the window object around after a close so reopening is instant and the
