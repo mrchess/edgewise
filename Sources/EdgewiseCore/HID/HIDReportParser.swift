@@ -46,15 +46,29 @@ public struct HIDReportParser: Sendable {
             coordinateChanged = updateContact { $0.rawX != value }
                                     transform: { c in
                 TouchSample(contactID: c.contactID, rawX: value, rawY: c.rawY,
-                            isTouching: c.isTouching)
+                            isTouching: c.isTouching, width: c.width, height: c.height)
             }
 
         case (HIDUsage.Page.genericDesktop, HIDUsage.y):
             coordinateChanged = updateContact { $0.rawY != value }
                                     transform: { c in
                 TouchSample(contactID: c.contactID, rawX: c.rawX, rawY: value,
-                            isTouching: c.isTouching)
+                            isTouching: c.isTouching, width: c.width, height: c.height)
             }
+
+        case (HIDUsage.Page.digitizer, HIDUsage.contactWidth):
+            _ = updateContact { $0.width != value } transform: { c in
+                TouchSample(contactID: c.contactID, rawX: c.rawX, rawY: c.rawY,
+                            isTouching: c.isTouching, width: value, height: c.height)
+            }
+            return nil
+
+        case (HIDUsage.Page.digitizer, HIDUsage.contactHeight):
+            _ = updateContact { $0.height != value } transform: { c in
+                TouchSample(contactID: c.contactID, rawX: c.rawX, rawY: c.rawY,
+                            isTouching: c.isTouching, width: c.width, height: value)
+            }
+            return nil
 
         case (HIDUsage.Page.digitizer, HIDUsage.tipSwitch),
              (HIDUsage.Page.button, HIDUsage.button1):
@@ -62,7 +76,7 @@ public struct HIDReportParser: Sendable {
             touchTransition = updateContact { $0.isTouching != down }
                                   transform: { c in
                 TouchSample(contactID: c.contactID, rawX: c.rawX, rawY: c.rawY,
-                            isTouching: down)
+                            isTouching: down, width: c.width, height: c.height)
             }
 
         default:
@@ -78,7 +92,8 @@ public struct HIDReportParser: Sendable {
     private mutating func updateContact(changed: (TouchSample) -> Bool,
                                         transform: (TouchSample) -> TouchSample) -> Bool {
         let existing = contacts[currentContactID]
-            ?? TouchSample(contactID: currentContactID, rawX: 0, rawY: 0, isTouching: false)
+            ?? TouchSample(contactID: currentContactID, rawX: 0, rawY: 0,
+                           isTouching: false)
         guard changed(existing) else { return false }
         contacts[currentContactID] = transform(existing)
         return true

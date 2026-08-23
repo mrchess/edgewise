@@ -208,6 +208,10 @@ func describe(_ event: GestureEvent) -> String {
         return "scroll      d(\(Int(dx)), \(Int(dy))) at \(p(a))"
     case .pinch(let magnification, let a):
         return String(format: "pinch       %+.3f at %@", magnification, p(a))
+    case .scrollMomentum(let dx, let dy, let a):
+        return "momentum    d(\(Int(dx)), \(Int(dy))) at \(p(a))"
+    case .scrollEnded(let vx, let vy, let a):
+        return "scroll end  v(\(Int(vx)), \(Int(vy)))/s at \(p(a))"
     }
 }
 

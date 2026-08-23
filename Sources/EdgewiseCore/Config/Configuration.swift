@@ -10,6 +10,11 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var gesture = GestureConfiguration()
 
     /// Remembered so the right display is found again after a replug or reorder.
+    /// Ignore contacts too large to be a fingertip — a resting wrist or forearm.
+    public var palmRejectionEnabled: Bool = true
+    /// Largest contact patch still treated as a finger, on the panel's 0...10 scale.
+    public var maximumContactSize: Int = 6
+
     public var displayIdentity: DisplayIdentity?
     /// Panel mounted upside down.
     public var isFlipped: Bool = false

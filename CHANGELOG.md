@@ -14,6 +14,12 @@ see [README](README.md#what-was-taken-from-where) for what came from where.
 
 - Tap to click at the touched point, press-and-hold to right-click, drag,
   two-finger scroll, and pinch to zoom.
+- Momentum scrolling: a flick coasts and decelerates rather than stopping dead.
+  Scroll events carry proper phase and momentum tags, so apps rubber-band correctly.
+- Two-finger tap to right-click, the trackpad convention.
+- Palm rejection using the contact patch size the panel reports, so a resting wrist
+  does not register as a touch.
+- Double-tap registers as a double-click.
 - Pinch is delivered either as a real trackpad magnify gesture or as command-scroll,
   selectable in settings.
 - `background` delivery mode: taps post directly to the app under your finger, leaving

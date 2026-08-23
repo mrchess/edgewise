@@ -8,8 +8,10 @@ other panels built on the same WCH touch controller.
 | Tap | Click, exactly where you touched |
 | Press and hold | Right-click |
 | Drag | Press, move, release |
-| Two fingers | Scroll |
+| Two fingers | Scroll, with momentum |
+| Two-finger tap | Right-click |
 | Pinch | Zoom |
+| Double-tap | Double-click |
 
 Plus a mode that posts taps straight to the app under your finger, so your cursor never
 leaves the main display at all.
@@ -52,6 +54,8 @@ Everything is in the app's settings. The underlying file lives at
 | Long press | 0.5s | Set to taste, or turn right-click off |
 | Drag threshold | 4pt | How far a finger moves before a tap becomes a drag |
 | Two-finger scroll | on | Natural direction by default |
+| Momentum | on | Flick and it coasts |
+| Palm rejection | on | Ignores contacts larger than a fingertip |
 | Pinch to zoom | on | `magnify` gesture, or `commandScroll` for maximum compatibility |
 | Display | auto | Pin the panel explicitly if detection picks wrong |
 

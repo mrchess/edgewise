@@ -14,6 +14,8 @@ public enum HIDUsage {
     public static let tipSwitch    = 0x42
     public static let contactID    = 0x51
     public static let contactCount = 0x54
+    public static let contactWidth  = 0x52
+    public static let contactHeight = 0x53
     /// Button
     public static let button1 = 0x01
 }

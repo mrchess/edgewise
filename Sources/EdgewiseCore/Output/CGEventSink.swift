@@ -36,6 +36,8 @@ public final class CGEventSink: EventSink {
     private var lastClickTime: TimeInterval = 0
     private var lastClickPoint: CGPoint = .zero
     private var clickState: Int64 = 1
+    private var isScrolling = false
+    private var isCoasting = false
 
     /// macOS's own double-click interval, so taps match the speed the user already
     /// has configured for their mouse and trackpad.
@@ -65,12 +67,16 @@ public final class CGEventSink: EventSink {
         case .dragMoved(let p):   moveDrag(to: p)
         case .dragEnded(let p):   endDrag(at: p)
         case .scroll(let dx, let dy, _): scroll(dx: dx, dy: dy)
+        case .scrollMomentum(let dx, let dy, _): scrollMomentum(dx: dx, dy: dy)
+        case .scrollEnded: endScrollPhase()
         case .pinch(let magnification, let p): pinch(magnification, at: p)
         }
     }
 
     public func releaseAll() {
         if isDragging { endDrag(at: currentCursor()) }
+        endScrollPhase()
+        endMomentum()
     }
 
     // MARK: - Clicks
@@ -146,12 +152,51 @@ public final class CGEventSink: EventSink {
 
     // MARK: - Scroll
 
+    /// Scroll phase, as macOS models a trackpad gesture: began while fingers are down,
+    /// ended when they lift, then a momentum run. Apps read these to drive
+    /// rubber-banding and to tell a real gesture from a mouse wheel, so a scroll
+    /// posted without them feels notably cruder even when the deltas are identical.
+    private enum Phase: Int64 { case began = 1, changed = 2, ended = 4 }
+    private enum MomentumPhase: Int64 { case none = 0, begin = 1, `continue` = 2, end = 3 }
+
+    private func makeScroll(dx: CGFloat, dy: CGFloat) -> CGEvent? {
+        CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2,
+                wheel1: Int32(dy.rounded()), wheel2: Int32(dx.rounded()), wheel3: 0)
+    }
+
     private func scroll(dx: CGFloat, dy: CGFloat) {
-        guard let e = CGEvent(scrollWheelEvent2Source: nil, units: .pixel,
-                              wheelCount: 2,
-                              wheel1: Int32(dy.rounded()),
-                              wheel2: Int32(dx.rounded()),
-                              wheel3: 0) else { return }
+        guard let e = makeScroll(dx: dx, dy: dy) else { return }
+        e.setIntegerValueField(.scrollWheelEventScrollPhase,
+                               value: (isScrolling ? Phase.changed : .began).rawValue)
+        isScrolling = true
+        isCoasting = false
+        e.post(tap: .cghidEventTap)
+    }
+
+    /// Closes the gesture so the app knows the fingers left, which is what lets
+    /// momentum read as a continuation rather than a fresh scroll.
+    private func endScrollPhase() {
+        guard isScrolling else { return }
+        isScrolling = false
+        guard let e = makeScroll(dx: 0, dy: 0) else { return }
+        e.setIntegerValueField(.scrollWheelEventScrollPhase, value: Phase.ended.rawValue)
+        e.post(tap: .cghidEventTap)
+    }
+
+    private func scrollMomentum(dx: CGFloat, dy: CGFloat) {
+        guard let e = makeScroll(dx: dx, dy: dy) else { return }
+        e.setIntegerValueField(.scrollWheelEventMomentumPhase,
+                               value: (isCoasting ? MomentumPhase.continue : .begin).rawValue)
+        isCoasting = true
+        e.post(tap: .cghidEventTap)
+    }
+
+    /// Ends a momentum run. Called when coasting stops or is interrupted.
+    public func endMomentum() {
+        guard isCoasting else { return }
+        isCoasting = false
+        guard let e = makeScroll(dx: 0, dy: 0) else { return }
+        e.setIntegerValueField(.scrollWheelEventMomentumPhase, value: MomentumPhase.end.rawValue)
         e.post(tap: .cghidEventTap)
     }
 

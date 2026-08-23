@@ -17,9 +17,24 @@ public struct GestureRecognizer: Sendable {
         case dragging(current: CGPoint)
         /// Long press already fired; ignore everything until release.
         case longPressed
-        /// Two or more contacts down. Tracks both how the group is moving (scroll)
-        /// and how far apart it is (pinch).
-        case scrolling(previousCentroid: CGPoint, previousSpread: CGFloat)
+        /// Two or more contacts down. Tracks how the group is moving (scroll), how
+        /// far apart it is (pinch), and whether it has done either yet — a
+        /// multi-finger contact that does neither and lifts quickly is a tap.
+        case scrolling(MultiTouchContext)
+    }
+
+    /// Live state of a multi-finger gesture.
+    public struct MultiTouchContext: Equatable, Sendable {
+        public var centroid: CGPoint
+        public var spread: CGFloat
+        public var began: TimeInterval
+        public var updated: TimeInterval
+        /// Smoothed, in points per second. Handed to momentum on lift.
+        public var velocityX: CGFloat = 0
+        public var velocityY: CGFloat = 0
+        /// Set once the gesture has actually scrolled or zoomed, which rules out
+        /// interpreting it as a tap when the fingers lift.
+        public var didAct: Bool = false
     }
 
     public private(set) var state: State = .idle
@@ -108,7 +123,23 @@ public struct GestureRecognizer: Sendable {
             return [.click(origin)]
         case .dragging(let current):
             return [.dragEnded(current)]
-        case .idle, .longPressed, .scrolling:
+        case .scrolling(let context):
+            // Two fingers down and up with no scroll or zoom in between is a tap.
+            if configuration.twoFingerTapRightClick, !context.didAct,
+               now - context.began <= configuration.twoFingerTapMaxDuration {
+                return [.rightClick(context.centroid)]
+            }
+            guard configuration.momentumEnabled, context.didAct else { return [] }
+            var scrollVelocityX = context.velocityX * configuration.scrollScale
+            var scrollVelocityY = context.velocityY * configuration.scrollScale
+            if !configuration.naturalScrolling {
+                scrollVelocityX = -scrollVelocityX
+                scrollVelocityY = -scrollVelocityY
+            }
+            return [.scrollEnded(velocityX: scrollVelocityX, velocityY: scrollVelocityY,
+                                 at: context.centroid)]
+
+        case .idle, .longPressed:
             return []
         }
     }
@@ -119,13 +150,22 @@ public struct GestureRecognizer: Sendable {
         let points = input.contacts.map(\.point)
         let centroid = Self.centroid(of: points)
         let spread = Self.spread(of: points, about: centroid)
+        let now = input.timestamp
+
+        func fresh() -> MultiTouchContext {
+            MultiTouchContext(centroid: centroid, spread: spread, began: now, updated: now)
+        }
 
         switch state {
-        case .scrolling(let previousCentroid, let previousSpread):
-            let dSpread = spread - previousSpread
-            let dx = centroid.x - previousCentroid.x
-            let dy = centroid.y - previousCentroid.y
-            state = .scrolling(previousCentroid: centroid, previousSpread: spread)
+        case .scrolling(var context):
+            let dSpread = spread - context.spread
+            let dx = centroid.x - context.centroid.x
+            let dy = centroid.y - context.centroid.y
+            let elapsed = now - context.updated
+
+            context.centroid = centroid
+            context.spread = spread
+            context.updated = now
 
             // Fingers moving apart or together is a pinch; the group sliding as a unit
             // is a scroll. Comparing the two magnitudes keeps a gesture from flickering
@@ -134,12 +174,27 @@ public struct GestureRecognizer: Sendable {
             if configuration.pinchEnabled,
                abs(dSpread) > configuration.pinchThreshold,
                abs(dSpread) > translation,
-               previousSpread > 1 {
-                let magnification = (dSpread / previousSpread) * configuration.pinchScale
+               spread > 1 {
+                context.didAct = true
+                state = .scrolling(context)
+                let magnification = (dSpread / max(spread - dSpread, 1)) * configuration.pinchScale
                 return [.pinch(magnification: magnification, at: centroid)]
             }
 
-            guard dx != 0 || dy != 0 else { return [] }
+            guard dx != 0 || dy != 0 else { state = .scrolling(context); return [] }
+
+            // Smooth the velocity estimate: a single frame straddling a report boundary
+            // is noisy, and momentum launched from one bad sample looks like a glitch.
+            if elapsed > 0 {
+                let instantX = dx / CGFloat(elapsed)
+                let instantY = dy / CGFloat(elapsed)
+                let smoothing: CGFloat = 0.7
+                context.velocityX = context.velocityX * (1 - smoothing) + instantX * smoothing
+                context.velocityY = context.velocityY * (1 - smoothing) + instantY * smoothing
+            }
+            context.didAct = true
+            state = .scrolling(context)
+
             var scrollX = dx * configuration.scrollScale
             var scrollY = dy * configuration.scrollScale
             if !configuration.naturalScrolling { scrollX = -scrollX; scrollY = -scrollY }
@@ -147,11 +202,11 @@ public struct GestureRecognizer: Sendable {
 
         case .dragging(let current):
             // A second finger landed mid-drag. Finish the drag cleanly first.
-            state = .scrolling(previousCentroid: centroid, previousSpread: spread)
+            state = .scrolling(fresh())
             return [.dragEnded(current)]
 
         default:
-            state = .scrolling(previousCentroid: centroid, previousSpread: spread)
+            state = .scrolling(fresh())
             return []
         }
     }

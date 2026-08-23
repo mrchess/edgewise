@@ -12,6 +12,13 @@ public enum GestureEvent: Equatable, Sendable {
     /// `magnification` is a fractional change, matching AppKit's convention:
     /// 0.1 means "10% larger". Negative pinches in.
     case pinch(magnification: CGFloat, at: CGPoint)
+    /// Fingers left the glass while still moving. Velocity is in points per second,
+    /// and is what momentum scrolling coasts on.
+    case scrollEnded(velocityX: CGFloat, velocityY: CGFloat, at: CGPoint)
+    /// A coasting scroll step, produced after the fingers have left. Distinct from
+    /// `.scroll` because macOS tags momentum separately, and apps use that tag to
+    /// drive rubber-banding and to know when to stop loading more content.
+    case scrollMomentum(deltaX: CGFloat, deltaY: CGFloat, at: CGPoint)
 }
 
 /// One contact after mapping into screen space.
@@ -57,6 +64,15 @@ public struct GestureConfiguration: Equatable, Codable, Sendable {
     public var pinchThreshold: CGFloat = 2.5
     /// Multiplier on the reported magnification.
     public var pinchScale: CGFloat = 1.0
+    /// Two fingers down and up quickly, without scrolling or zooming, right-clicks —
+    /// the trackpad convention, and quicker than waiting out a long press.
+    public var twoFingerTapRightClick: Bool = true
+    /// Longest a two-finger contact can last and still count as a tap.
+    public var twoFingerTapMaxDuration: TimeInterval = 0.3
+    /// Coast after a flick instead of stopping dead when the fingers lift.
+    public var momentumEnabled: Bool = true
+    /// Fraction of velocity retained each tick while coasting. Higher glides further.
+    public var momentumDeceleration: CGFloat = 0.94
 
     public init() {}
 }

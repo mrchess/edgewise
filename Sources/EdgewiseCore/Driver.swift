@@ -21,6 +21,10 @@ public final class Driver {
     private var mapper: CoordinateMapper?
     private var configuration: Configuration
     private var tickTimer: DispatchSourceTimer?
+    private var palmFilter: PalmFilter
+    private var momentum = MomentumScroller()
+    private var lastMomentumStep: TimeInterval = 0
+    private var momentumOrigin: CGPoint = .zero
     private let clock: () -> TimeInterval
 
     public init(configuration: Configuration = .load(),
@@ -33,6 +37,10 @@ public final class Driver {
         self.monitor = monitor
         self.clock = clock
         self.recognizer = GestureRecognizer(configuration: configuration.gesture)
+        self.palmFilter = PalmFilter(isEnabled: configuration.palmRejectionEnabled,
+                                     maximumContactSize: configuration.maximumContactSize)
+        self.momentum = MomentumScroller(
+            deceleration: configuration.gesture.momentumDeceleration)
         self.sink = sink ?? Driver.makeSink(for: configuration)
     }
 
@@ -83,6 +91,7 @@ public final class Driver {
 
     public func stop() {
         tickTimer?.cancel(); tickTimer = nil
+        momentum.stop()
         sink.releaseAll()
         monitor.stop()
         CGDisplayRemoveReconfigurationCallback(Driver.displayChanged,
@@ -93,6 +102,10 @@ public final class Driver {
     public func apply(_ newConfiguration: Configuration) {
         configuration = newConfiguration
         recognizer.configuration = newConfiguration.gesture
+        palmFilter = PalmFilter(isEnabled: newConfiguration.palmRejectionEnabled,
+                                maximumContactSize: newConfiguration.maximumContactSize)
+        momentum.deceleration = newConfiguration.gesture.momentumDeceleration
+        momentum.stop()
         sink.releaseAll()
         sink = Driver.makeSink(for: newConfiguration)
         _ = updateMapping()
@@ -102,11 +115,30 @@ public final class Driver {
 
     private func handle(_ frame: TouchFrame) {
         guard let mapper else { return }
-        let contacts = frame.activeContacts.map {
+
+        // A new touch cancels any glide, the way putting a finger on a phone stops it.
+        if momentum.isCoasting, !frame.activeContacts.isEmpty {
+            momentum.stop()
+            (sink as? CGEventSink)?.endMomentum()
+        }
+
+        let contacts = palmFilter.filter(frame).activeContacts.map {
             MappedContact(id: $0.contactID, point: mapper.map(rawX: $0.rawX, rawY: $0.rawY))
         }
         let input = GestureInput(contacts: contacts, timestamp: frame.timestamp)
-        for event in recognizer.ingest(input) { sink.perform(event) }
+        for event in recognizer.ingest(input) { deliver(event) }
+    }
+
+    /// Routes an event, intercepting the hand-off into momentum.
+    private func deliver(_ event: GestureEvent) {
+        if case .scrollEnded(let vx, let vy, let at) = event {
+            sink.perform(event)
+            momentumOrigin = at
+            lastMomentumStep = clock()
+            momentum.begin(velocityX: vx, velocityY: vy)
+            return
+        }
+        sink.perform(event)
     }
 
     private func handleDisconnect() {
@@ -116,14 +148,31 @@ public final class Driver {
 
     private func startTicking() {
         let timer = DispatchSource.makeTimerSource(queue: .main)
-        // Comfortably finer than the shortest long-press anyone would configure.
-        timer.schedule(deadline: .now() + 0.05, repeating: 0.05)
+        // 60Hz: fine enough that a coasting scroll looks smooth, and comfortably
+        // finer than the shortest long press anyone would configure.
+        timer.schedule(deadline: .now() + 1.0 / 60, repeating: 1.0 / 60)
         timer.setEventHandler { [weak self] in
             guard let self else { return }
-            for event in self.recognizer.tick(at: self.clock()) { self.sink.perform(event) }
+            let now = self.clock()
+            for event in self.recognizer.tick(at: now) { self.deliver(event) }
+            self.stepMomentum(at: now)
         }
         timer.resume()
         tickTimer = timer
+    }
+
+    /// Advances a coasting scroll. Driven from the same tick as gesture timing so
+    /// there is only one timer in the driver.
+    private func stepMomentum(at now: TimeInterval) {
+        guard momentum.isCoasting else { return }
+        let elapsed = min(now - lastMomentumStep, 0.05)
+        lastMomentumStep = now
+        guard elapsed > 0 else { return }
+
+        if let (dx, dy) = momentum.step(elapsed: elapsed) {
+            sink.perform(.scrollMomentum(deltaX: dx, deltaY: dy, at: momentumOrigin))
+        }
+        if !momentum.isCoasting { (sink as? CGEventSink)?.endMomentum() }
     }
 
     // MARK: - Display mapping

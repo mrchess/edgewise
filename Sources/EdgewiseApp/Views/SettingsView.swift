@@ -23,6 +23,14 @@ struct SettingsView: View {
             }
 
             Section("Touch panel") {
+                Toggle("Ignore palms and resting hands", isOn: Binding(
+                    get: { driver.configuration.palmRejectionEnabled },
+                    set: { driver.configuration.palmRejectionEnabled = $0 }))
+                .help("""
+                Ignores contacts too large to be a fingertip, so a resting wrist \
+                does not register as a touch.
+                """)
+
                 Picker("Display", selection: Binding(
                     get: { driver.configuration.displayIdentity },
                     set: { identity in
@@ -80,9 +88,19 @@ struct SettingsView: View {
                     }
                 }
 
+                Toggle("Two-finger tap to right-click", isOn: Binding(
+                    get: { driver.configuration.gesture.twoFingerTapRightClick },
+                    set: { driver.configuration.gesture.twoFingerTapRightClick = $0 }))
+
                 Toggle("Two-finger scroll", isOn: Binding(
                     get: { driver.configuration.gesture.scrollEnabled },
                     set: { driver.configuration.gesture.scrollEnabled = $0 }))
+
+                if driver.configuration.gesture.scrollEnabled {
+                    Toggle("Keep scrolling after a flick", isOn: Binding(
+                        get: { driver.configuration.gesture.momentumEnabled },
+                        set: { driver.configuration.gesture.momentumEnabled = $0 }))
+                }
 
                 if driver.configuration.gesture.scrollEnabled {
                     Toggle("Natural scrolling direction", isOn: Binding(

@@ -9,13 +9,24 @@ public struct TouchSample: Equatable, Sendable {
     public let rawX: Int
     public let rawY: Int
     public let isTouching: Bool
+    /// Contact patch size as the panel reports it, on its own 0...10 scale.
+    /// Zero when the firmware does not report it.
+    public let width: Int
+    public let height: Int
 
-    public init(contactID: Int, rawX: Int, rawY: Int, isTouching: Bool) {
+    public init(contactID: Int, rawX: Int, rawY: Int, isTouching: Bool,
+                width: Int = 0, height: Int = 0) {
         self.contactID = contactID
         self.rawX = rawX
         self.rawY = rawY
         self.isTouching = isTouching
+        self.width = width
+        self.height = height
     }
+
+    /// The larger dimension of the contact patch — a fingertip is small and roughly
+    /// round, the heel of a hand is not.
+    public var size: Int { max(width, height) }
 }
 
 /// A complete picture of every contact currently on the glass.
