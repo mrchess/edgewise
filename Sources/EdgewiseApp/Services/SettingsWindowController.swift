@@ -29,7 +29,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let window = NSWindow(contentViewController: hosting)
         window.title = "Edgewise"
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.setContentSize(NSSize(width: 540, height: 660))
+        // Size to the form rather than to a guess, so the window does not carry dead
+        // space beneath its last control — and so it still fits when sections appear
+        // or disappear with the hardware's capabilities.
+        let fitted = hosting.view.fittingSize
+        window.setContentSize(NSSize(width: 540, height: max(fitted.height, 320)))
         window.center()
         window.isReleasedWhenClosed = false
         window.delegate = self
