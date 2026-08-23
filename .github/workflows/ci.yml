@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build
+        run: swift build --build-tests
+
+      # The whole test suite runs headless with no panel attached: the core is pure,
+      # and hardware behaviour is covered by replaying recorded HID fixtures.
+      - name: Test
+        run: swift test --enable-code-coverage
+
+      - name: Coverage summary
+        run: |
+          BIN=$(swift build --show-bin-path)
+          PROF="$BIN/codecov/default.profdata"
+          XCTEST=$(find "$BIN" -name '*.xctest' -maxdepth 1 | head -1)
+          if [ -n "$XCTEST" ] && [ -f "$PROF" ]; then
+            xcrun llvm-cov report \
+              "$XCTEST/Contents/MacOS/$(basename "$XCTEST" .xctest)" \
+              -instr-profile "$PROF" \
+              -ignore-filename-regex='(Tests|\.build)/' \
+              | tee coverage.txt
+            echo '### Coverage' >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tail -3 coverage.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  package:
+    name: Package app
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      # Proves the shipping artifact still builds on every change, so a broken
+      # release is caught here rather than at tag time.
+      - name: Build unsigned app and DMG
+        run: ./Scripts/build-app.sh
+
+      - name: Verify bundle
+        run: |
+          lipo -archs dist/Edgewise.app/Contents/MacOS/Edgewise
+          codesign --verify --verbose dist/Edgewise.app
+          test -f dist/Edgewise.app/Contents/Resources/AppIcon.icns
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Edgewise-unsigned
+          path: dist/*.dmg
+          retention-days: 14
+
+  lint:
+    name: Documentation checks
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      # Attribution to the projects this one draws on is a licence obligation,
+      # not a nicety. Fail the build if it goes missing.
+      - name: Attribution present
+        run: |
+          for project in ymlaine/TouchscreenDriver \
+                         ajvwhite/MacXeneonEdgeTouchDriver; do
+            grep -q "$project" README.md || {
+              echo "::error::README.md must credit $project"; exit 1; }
+          done
+          grep -q "MIT" LICENSE || { echo "::error::LICENSE missing"; exit 1; }

@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Check version matches tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          [ -z "$TAG" ] && TAG="${{ inputs.tag }}" && TAG="${TAG#v}"
+          VERSION=$(grep -o '"[0-9]\+\.[0-9]\+\.[0-9]\+"' \
+            Sources/EdgewiseCore/Support/Version.swift | tr -d '"')
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Tag $TAG does not match Version.swift ($VERSION)"
+            exit 1
+          fi
+
+      - name: Test before shipping
+        run: swift test
+
+      # Signing and notarization run only when the secrets exist, so a fork can
+      # still cut an unsigned build without any configuration.
+      - name: Import signing certificate
+        if: ${{ env.CERT_P12 != '' }}
+        env:
+          CERT_P12: ${{ secrets.CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$CERT_P12" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import /tmp/cert.p12 -k build.keychain \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm /tmp/cert.p12
+
+      - name: Store notarization credentials
+        if: ${{ secrets.NOTARY_APPLE_ID != '' }}
+        run: |
+          xcrun notarytool store-credentials edgewise-notary \
+            --apple-id "${{ secrets.NOTARY_APPLE_ID }}" \
+            --team-id "${{ secrets.NOTARY_TEAM_ID }}" \
+            --password "${{ secrets.NOTARY_PASSWORD }}"
+
+      - name: Build release
+        env:
+          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID }}
+          NOTARY_PROFILE: ${{ secrets.NOTARY_APPLE_ID != '' && 'edgewise-notary' || '' }}
+        run: ./Scripts/build-app.sh
+
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[?"v : { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/notes.md
+          [ -s /tmp/notes.md ] || echo "See CHANGELOG.md" > /tmp/notes.md
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.dmg
+          body_path: /tmp/notes.md
+          draft: false
+          generate_release_notes: true
