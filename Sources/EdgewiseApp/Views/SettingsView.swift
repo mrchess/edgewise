@@ -128,6 +128,19 @@ struct SettingsView: View {
             }
 
             Section("General") {
+                Toggle("Show icon in the menu bar", isOn: Binding(
+                    get: { driver.configuration.showMenuBarIcon },
+                    set: { driver.configuration.showMenuBarIcon = $0 }))
+
+                if !driver.configuration.showMenuBarIcon {
+                    Text("""
+                    Edgewise now runs with no icon anywhere. To get back to these \
+                    settings, open Edgewise again from your Applications folder.
+                    """)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+
                 Toggle("Open at login", isOn: Binding(
                     get: { loginItem.isEnabled },
                     set: { loginItemError = loginItem.set($0) }))

@@ -26,6 +26,9 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var restoreCursor: Bool = true
     public var hideCursorDuringClick: Bool = true
     public var startAtLogin: Bool = true
+    /// Show the menu bar icon. With it hidden, Edgewise runs completely invisibly and
+    /// is reached by opening the app again from Applications.
+    public var showMenuBarIcon: Bool = true
 
     public init() {}
 

@@ -52,14 +52,37 @@ if [ -f Scripts/make-icon.swift ]; then
         echo "    (icon generation skipped)"
 fi
 
-# Ad-hoc signing keeps the bundle launchable locally; CI replaces this with a real
-# Developer ID signature when the secrets are present.
+# Pick a signing identity if one was not given.
+#
+# Signing with a real certificate is not only about distribution: an ad-hoc signature
+# has no team identity, so macOS identifies the app by its code hash, which changes on
+# every build. Permissions granted for Input Monitoring and Accessibility then go stale
+# each rebuild and have to be granted again. A certificate makes the designated
+# requirement key on bundle ID and certificate instead, so the grant survives.
+#
+# "Developer ID Application" is preferred — it is the one that can be notarised and
+# distributed. "Apple Development" is enough for local use.
+if [ -z "${DEVELOPER_ID:-}" ]; then
+    DEVELOPER_ID=$(security find-identity -v -p codesigning 2>/dev/null \
+        | grep "Developer ID Application" | head -1 \
+        | sed -E 's/.*"(.*)".*/\1/' || true)
+fi
+if [ -z "${DEVELOPER_ID:-}" ]; then
+    DEVELOPER_ID=$(security find-identity -v -p codesigning 2>/dev/null \
+        | grep "Apple Development" | head -1 \
+        | sed -E 's/.*"(.*)".*/\1/' || true)
+    if [ -n "$DEVELOPER_ID" ]; then
+        echo "    note: development certificate — fine locally, not distributable."
+    fi
+fi
+
 if [ -n "${DEVELOPER_ID:-}" ]; then
-    echo "==> Signing with Developer ID"
+    echo "==> Signing as ${DEVELOPER_ID}"
     codesign --force --deep --options runtime --timestamp \
              --sign "$DEVELOPER_ID" "$APP"
 else
-    echo "==> Ad-hoc signing (no DEVELOPER_ID set)"
+    echo "==> Ad-hoc signing — no certificate found."
+    echo "    Permissions will need re-granting after every rebuild."
     codesign --force --deep --sign - "$APP"
 fi
 
