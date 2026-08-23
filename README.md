@@ -42,11 +42,12 @@ claim — of the hardware. See [below](#multi-finger-gestures-cannot-work-on-mac
 
 **Brightness, colour and resolution.** Edgewise handles touch input only. The panel
 answers DDC/CI, so [MonitorControl](https://github.com/MonitorControl/MonitorControl)
-covers picture settings. For larger text you need
-[BetterDisplay](https://github.com/waydabber/BetterDisplay): macOS lists a half-size
-Retina mode for this panel but refuses to set it — both `CGDisplaySetDisplayMode` and a
-display configuration transaction return `kCGErrorIllegalArgument` — so no application
-can select it.
+covers picture settings. Text size Edgewise cannot help with at all: macOS lists a
+half-size Retina mode for this panel but refuses to set it — both
+`CGDisplaySetDisplayMode` and a display configuration transaction return
+`kCGErrorIllegalArgument` — so no application can select it, this one included.
+[BetterDisplay](https://github.com/waydabber/BetterDisplay) reaches below that gate with
+a display override, which takes effect after a reboot.
 
 ## Install
 

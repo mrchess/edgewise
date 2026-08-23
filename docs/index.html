@@ -27,53 +27,65 @@
 
   /* Light palette is the base; dark redefines only tokens. */
   :root {
-    --ground:      #F5F7FA;
-    --raised:      #FFFFFF;
-    --sunken:      #ECEFF4;
+    --ground:      #FFFFFF;
+    --raised:      #F6F8FA;   /* GitHub's canvas.subtle — buttons and cards sit on it */
+    --sunken:      #EFF2F5;
     --slab:        #10131B;   /* the panel itself — dark in both themes */
     --slab-edge:   #2A3040;
-    --ink:         #0F131C;
-    --ink-soft:    #4B5567;
-    --ink-faint:   #7B8698;
-    --rule:        #DBE1EA;
-    --accent:      #0A6CBC;
-    --accent-soft: #E3F0FB;
+    --ink:         #1F2328;
+    --ink-soft:    #59636E;
+    --ink-faint:   #818B98;
+    --rule:        #D1D9E0;
+    --accent:      #0969DA;   /* links */
+    --accent-soft: #DDF4FF;
+    --go:          #1F883D;   /* the one action worth a colour: download */
+    --go-hover:    #1A7F37;
+    --on-go:       #FFFFFF;
     --glow:        #5CBEFF;   /* the touch point — constant in both themes */
-    --shadow:      0 1px 2px rgba(15, 19, 28, .06), 0 8px 24px rgba(15, 19, 28, .05);
+    --shadow:      0 1px 0 rgba(31, 35, 40, .04);
+    --shadow-lift: 0 3px 6px rgba(140, 149, 159, .15);
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground:      #0A0C12;
-      --raised:      #12151E;
-      --sunken:      #0E111A;
+      --ground:      #0D1117;
+      --raised:      #151B23;
+      --sunken:      #10161D;
       --slab:        #0C0E15;
       --slab-edge:   #2E3648;
-      --ink:         #DFE5F1;
-      --ink-soft:    #9AA6BA;
-      --ink-faint:   #6B7789;
-      --rule:        #1E2331;
-      --accent:      #5CBEFF;
-      --accent-soft: #12222F;
+      --ink:         #F0F6FC;
+      --ink-soft:    #9198A1;
+      --ink-faint:   #6E7681;
+      --rule:        #3D444D;
+      --accent:      #4493F8;
+      --accent-soft: #121D2F;
+      --go:          #238636;
+      --go-hover:    #29903B;
+      --on-go:       #FFFFFF;
       --glow:        #5CBEFF;
-      --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .35);
+      --shadow:      0 1px 0 rgba(1, 4, 9, .2);
+      --shadow-lift: 0 3px 6px rgba(1, 4, 9, .4);
     }
   }
 
   :root[data-theme="dark"] {
-    --ground:      #0A0C12;
-    --raised:      #12151E;
-    --sunken:      #0E111A;
-    --slab:        #0C0E15;
-    --slab-edge:   #2E3648;
-    --ink:         #DFE5F1;
-    --ink-soft:    #9AA6BA;
-    --ink-faint:   #6B7789;
-    --rule:        #1E2331;
-    --accent:      #5CBEFF;
-    --accent-soft: #12222F;
-    --glow:        #5CBEFF;
-    --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .35);
+      --ground:      #0D1117;
+      --raised:      #151B23;
+      --sunken:      #10161D;
+      --slab:        #0C0E15;
+      --slab-edge:   #2E3648;
+      --ink:         #F0F6FC;
+      --ink-soft:    #9198A1;
+      --ink-faint:   #6E7681;
+      --rule:        #3D444D;
+      --accent:      #4493F8;
+      --accent-soft: #121D2F;
+      --go:          #238636;
+      --go-hover:    #29903B;
+      --on-go:       #FFFFFF;
+      --glow:        #5CBEFF;
+      --shadow:      0 1px 0 rgba(1, 4, 9, .2);
+      --shadow-lift: 0 3px 6px rgba(1, 4, 9, .4);
   }
 
   * { box-sizing: border-box; }
@@ -117,62 +129,52 @@
   /* A 32:9 hairline — the panel's own proportion, used as the section divider. */
   .divider { max-width: 1000px; margin: 0 auto; height: 1px; background: var(--rule); }
 
-  /* ── Top bar ──────────────────────────────────────────── */
+  /* ── Top bar ───────────────────────────────────────────── */
   .topbar {
     position: sticky; top: 0; z-index: 10;
-    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
     backdrop-filter: saturate(180%) blur(12px);
     border-bottom: 1px solid var(--rule);
-    margin: 0 -24px 0; padding: 0 24px;
+    margin: 0 -24px; padding: 0 24px;
   }
   .topbar-inner {
-    max-width: 1000px; margin-inline: auto; height: 56px;
-    display: flex; align-items: center; gap: 12px;
+    max-width: 1000px; margin-inline: auto; height: 60px;
+    display: flex; align-items: center; gap: 16px;
   }
   .wordmark {
-    display: flex; align-items: center; gap: 9px;
-    font-family: Archivo, sans-serif; font-weight: 600; font-size: .98rem;
+    display: flex; align-items: center; gap: 10px;
+    font-family: Archivo, sans-serif; font-weight: 600; font-size: 1rem;
     letter-spacing: -.01em; color: var(--ink); text-decoration: none;
   }
-  .wordmark img { width: 24px; height: 24px; border-radius: 6px; display: block; }
-  .topbar nav { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .wordmark img { width: 26px; height: 26px; border-radius: 7px; display: block; }
+  .topbar nav { margin-left: auto; display: flex; align-items: center; gap: 4px; }
 
+  /* GitHub's button proportions: 32px tall, 6px radius, hairline border. */
   .btn {
     display: inline-flex; align-items: center; gap: 7px;
-    font-family: "IBM Plex Sans", sans-serif; font-size: .85rem; font-weight: 500;
-    padding: 6px 12px; border-radius: 6px; text-decoration: none;
+    font-family: "IBM Plex Sans", sans-serif; font-size: .84rem; font-weight: 500;
+    line-height: 1; padding: 0 12px; height: 32px; border-radius: 6px;
+    text-decoration: none; white-space: nowrap;
     border: 1px solid var(--rule); background: var(--raised); color: var(--ink);
-    transition: border-color .12s ease, background .12s ease;
+    box-shadow: var(--shadow);
+    transition: background .12s ease, border-color .12s ease;
   }
-  .btn:hover { border-color: var(--ink-faint); }
+  .btn:hover { background: var(--sunken); border-color: var(--ink-faint); }
   .btn svg { flex: none; }
-  .btn-quiet { border-color: transparent; background: transparent; color: var(--ink-soft); }
-  .btn-quiet:hover { background: var(--sunken); border-color: transparent; color: var(--ink); }
-  .btn-primary {
-    background: var(--accent); border-color: var(--accent); color: var(--raised);
-    font-weight: 600;
+  .btn-quiet {
+    border-color: transparent; background: transparent; color: var(--ink-soft);
+    box-shadow: none; font-weight: 400;
   }
-  .btn-primary:hover { filter: brightness(1.08); border-color: var(--accent); }
-  :root:not([data-theme="light"]) .btn-primary { color: #08111A; }
-  @media (prefers-color-scheme: light) { .btn-primary { color: #fff; } }
-  :root[data-theme="light"] .btn-primary { color: #fff; }
-
-  /* GitHub's own star affordance: a button joined to a count-style tail. */
-  .star { display: inline-flex; align-items: stretch; }
-  .star .btn { border-radius: 6px 0 0 6px; }
-  .shield { height: 16px; display: block; }
-  .star .tail {
-    display: inline-flex; align-items: center; padding: 6px 11px;
-    border: 1px solid var(--rule); border-left: 0; border-radius: 0 6px 6px 0;
-    background: var(--sunken); color: var(--ink-soft);
-    font-family: "IBM Plex Mono", monospace; font-size: .78rem;
+  .btn-quiet:hover { background: var(--raised); border-color: transparent; color: var(--ink); }
+  .btn-go {
+    background: var(--go); border-color: color-mix(in srgb, var(--go) 70%, #000);
+    color: var(--on-go); font-weight: 600;
   }
-  @media (max-width: 640px) {
-    .topbar nav .hide-sm { display: none; }
-  }
+  .btn-go:hover { background: var(--go-hover); border-color: color-mix(in srgb, var(--go) 60%, #000); }
+  @media (max-width: 700px) { .topbar nav .hide-sm { display: none; } }
 
   .cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  .cta .btn { font-size: .92rem; padding: 9px 16px; border-radius: 7px; }
+  .cta .btn { height: 40px; font-size: .92rem; padding: 0 18px; }
 
   /* ── Hero ─────────────────────────────────────────────── */
   header { padding-block: 56px 40px; }
@@ -180,9 +182,9 @@
 
   .badges { display: flex; flex-wrap: wrap; gap: 8px; }
   .badge {
-    font-family: "IBM Plex Mono", monospace; font-size: .72rem;
-    padding: 4px 9px; border: 1px solid var(--rule); border-radius: 4px;
-    color: var(--ink-soft); background: var(--raised);
+    font-family: "IBM Plex Mono", monospace; font-size: .7rem;
+    padding: 3px 8px; border: 1px solid var(--rule); border-radius: 999px;
+    color: var(--ink-soft); background: transparent;
   }
 
   /* ── The panel mock ───────────────────────────────────── */
@@ -193,7 +195,7 @@
     border-radius: 10px;
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-lift);
   }
   .panel-caption {
     font-family: "IBM Plex Mono", monospace; font-size: .72rem;
@@ -242,7 +244,7 @@
   /* ── Screenshot ───────────────────────────────────────── */
   .shot {
     display: block; max-width: 540px; width: 100%; margin: 0 auto;
-    border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow);
+    border: 1px solid var(--rule); border-radius: 10px; box-shadow: var(--shadow-lift);
   }
   .shot-caption {
     font-size: .85rem; color: var(--ink-faint); text-align: center; margin-top: 12px;
@@ -297,11 +299,6 @@
       <a class="btn btn-quiet hide-sm" href="#gestures">Gestures</a>
       <a class="btn btn-quiet hide-sm" href="#multitouch">Findings</a>
       <a class="btn btn-quiet hide-sm" href="#install">Install</a>
-      <span class="star">
-        <a class="btn" href="https://github.com/mrchess/edgewise/stargazers"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg> Star</a>
-        <span class="tail"><img class="shield"
-          src="https://img.shields.io/github/stars/mrchess/edgewise?style=flat&label=&color=transparent&labelColor=transparent"
-          alt="stars"></span>
       </span>
       <a class="btn" href="https://github.com/mrchess/edgewise"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> GitHub</a>
     </nav>
@@ -316,7 +313,7 @@
     like a trackpad, because macOS has no idea what it is. Edgewise fixes that.
   </p>
   <div class="cta">
-    <a class="btn btn-primary" href="https://github.com/mrchess/edgewise/releases">Download for macOS</a>
+    <a class="btn btn-go" href="https://github.com/mrchess/edgewise/releases">Download for macOS</a>
     <a class="btn" href="https://github.com/mrchess/edgewise"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg> View on GitHub</a>
   </div>
   <div class="badges">
