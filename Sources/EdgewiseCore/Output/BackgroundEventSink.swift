@@ -23,6 +23,25 @@ public final class BackgroundEventSink: EventSink {
     private let fallback: CGEventSink
     private var isDragging = false
 
+    /// Double-tap tracking, mirroring `CGEventSink`. Per-process posting has to carry
+    /// the same click state or double-tapping does nothing in background mode either.
+    private var lastClickTime: TimeInterval = 0
+    private var lastClickPoint: CGPoint = .zero
+    private var clickState: Int64 = 1
+
+    private func advanceClickState(at point: CGPoint) {
+        let now = Date().timeIntervalSinceReferenceDate
+        let interval = UserDefaults.standard
+            .double(forKey: "com.apple.mouse.doubleClickThreshold")
+        let threshold = interval > 0 ? interval : 0.5
+        let dx = point.x - lastClickPoint.x, dy = point.y - lastClickPoint.y
+        let moved = (dx * dx + dy * dy).squareRoot()
+        clickState = (now - lastClickTime <= threshold && moved <= 12)
+            ? min(clickState + 1, 3) : 1
+        lastClickTime = now
+        lastClickPoint = point
+    }
+
     public init(fallback: CGEventSink = CGEventSink(restoreCursor: false,
                                                     hideCursorDuringClick: false)) {
         self.fallback = fallback
@@ -58,9 +77,13 @@ public final class BackgroundEventSink: EventSink {
             fallback.perform(button == .left ? .click(point) : .rightClick(point))
             return
         }
+        advanceClickState(at: point)
         for type in [down, up] {
             guard let e = CGEvent(mouseEventSource: nil, mouseType: type,
                                   mouseCursorPosition: point, mouseButton: button) else { continue }
+            if clickState > 1 {
+                e.setIntegerValueField(.mouseEventClickState, value: clickState)
+            }
             e.postToPid(pid)
         }
     }

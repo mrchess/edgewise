@@ -32,6 +32,21 @@ public final class CGEventSink: EventSink {
     private var isDragging = false
     private var savedCursor: CGPoint?
 
+    /// State for recognising a double- or triple-tap.
+    private var lastClickTime: TimeInterval = 0
+    private var lastClickPoint: CGPoint = .zero
+    private var clickState: Int64 = 1
+
+    /// macOS's own double-click interval, so taps match the speed the user already
+    /// has configured for their mouse and trackpad.
+    private var doubleClickInterval: TimeInterval {
+        // NSEvent.doubleClickInterval without importing AppKit into the sink.
+        let value = UserDefaults.standard.double(forKey: "com.apple.mouse.doubleClickThreshold")
+        return value > 0 ? value : 0.5
+    }
+    /// Taps further apart than this are separate clicks even if they are quick.
+    private let doubleClickSlop: CGFloat = 12
+
     public init(timings: Timings = Timings(),
                 restoreCursor: Bool = true,
                 hideCursorDuringClick: Bool = true,
@@ -61,6 +76,7 @@ public final class CGEventSink: EventSink {
     // MARK: - Clicks
 
     private func tapClick(at point: CGPoint, button: CGMouseButton) {
+        advanceClickState(at: point)
         let origin = currentCursor()
         if hideCursorDuringClick { CGDisplayHideCursor(CGMainDisplayID()) }
         defer { if hideCursorDuringClick { CGDisplayShowCursor(CGMainDisplayID()) } }
@@ -70,14 +86,36 @@ public final class CGEventSink: EventSink {
 
         let down: CGEventType = button == .left ? .leftMouseDown : .rightMouseDown
         let up:   CGEventType = button == .left ? .leftMouseUp   : .rightMouseUp
-        post(down, at: point, button: button)
+        post(down, at: point, button: button, clickState: clickState)
         Thread.sleep(forTimeInterval: timings.downToUp)
-        post(up, at: point, button: button)
+        post(up, at: point, button: button, clickState: clickState)
 
         if restoreCursor {
             Thread.sleep(forTimeInterval: timings.clickToRestore)
             warp(to: origin)
         }
+    }
+
+    /// Counts consecutive taps so macOS sees a double- or triple-click.
+    ///
+    /// A click's "click state" is what applications actually read to decide whether
+    /// something was double-clicked — two separate events posted close together are
+    /// not enough on their own. Without this, double-tapping a folder in Finder or a
+    /// word in a text field does nothing, which is the first thing anyone tries.
+    private func advanceClickState(at point: CGPoint) {
+        let now = Date().timeIntervalSinceReferenceDate
+        let elapsed = now - lastClickTime
+        let moved = ((point.x - lastClickPoint.x) * (point.x - lastClickPoint.x)
+                   + (point.y - lastClickPoint.y) * (point.y - lastClickPoint.y)).squareRoot()
+
+        if elapsed <= doubleClickInterval, moved <= doubleClickSlop {
+            // Cap at three: macOS defines no meaningful state beyond a triple-click.
+            clickState = min(clickState + 1, 3)
+        } else {
+            clickState = 1
+        }
+        lastClickTime = now
+        lastClickPoint = point
     }
 
     // MARK: - Drag
@@ -167,9 +205,13 @@ public final class CGEventSink: EventSink {
         post(.mouseMoved, at: point, button: .left)
     }
 
-    private func post(_ type: CGEventType, at point: CGPoint, button: CGMouseButton) {
+    private func post(_ type: CGEventType, at point: CGPoint, button: CGMouseButton,
+                      clickState: Int64 = 1) {
         guard let e = CGEvent(mouseEventSource: nil, mouseType: type,
                               mouseCursorPosition: point, mouseButton: button) else { return }
+        if clickState > 1 {
+            e.setIntegerValueField(.mouseEventClickState, value: clickState)
+        }
         e.post(tap: .cghidEventTap)
     }
 
