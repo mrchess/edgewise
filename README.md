@@ -18,6 +18,7 @@ the gestures you would expect from any touchscreen.
 | Press and hold | Right-click |
 | Drag | Press, move, release |
 | Two fingers | Scroll |
+| Pinch | Zoom |
 
 Plus a mode that posts taps straight to the app under your finger, so your cursor never
 leaves the main display at all.
@@ -81,8 +82,13 @@ also informed the release setup here.
   recognizer. Hardware behaviour stays under test on machines with no panel attached.
 - **A real app.** Menu bar app with an onboarding flow, live permission state, and a
   display picker. One binary, one set of permissions.
-- **Two-finger scrolling**, and a gesture recognizer with no timers or CoreGraphics in
-  it at all, so every timing rule is unit-tested without sleeping.
+- **Two-finger scroll and pinch to zoom.** The panel's descriptor advertises
+  `Contact ID [0...15]` and a contact-count maximum of 15, so it is a genuine
+  multi-touch digitizer — contrary to the received wisdom that its multi-touch is a
+  hardware limitation. Scroll and zoom are told apart by comparing how much the
+  contacts translate against how much their separation changes.
+- A gesture recognizer with no timers and no CoreGraphics in it at all, so every
+  timing rule is unit-tested without sleeping.
 
 ## Configuration
 
@@ -95,6 +101,7 @@ Everything is in the app's settings. The underlying file lives at
 | Long press | 0.5s | Set to taste, or turn right-click off |
 | Drag threshold | 4pt | How far a finger moves before a tap becomes a drag |
 | Two-finger scroll | on | Natural direction by default |
+| Pinch to zoom | on | `magnify` gesture, or `commandScroll` for maximum compatibility |
 | Display | auto | Pin the panel explicitly if detection picks wrong |
 
 ## Diagnostics
@@ -122,8 +129,9 @@ edgewise-diag doctor
   mode falls back automatically for drags.
 - **Some Chromium renderers** coerce a posted right-click into a left-click in web
   content. Use warp mode there.
-- **The panel reports one contact on current firmware.** Two-finger scrolling is
-  implemented and tested, and activates if your panel reports multiple contacts.
+- **Pinch uses undocumented CoreGraphics gesture fields** to synthesise a real
+  trackpad magnify event. If a future macOS changes them, switch the setting to
+  Command-scroll, which is built on public API only.
 
 ## Building
 

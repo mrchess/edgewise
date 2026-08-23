@@ -27,16 +27,19 @@ public final class CGEventSink: EventSink {
     /// Put the cursor back where it was after a click, so the panel does not steal it.
     public var restoreCursor: Bool
     public var hideCursorDuringClick: Bool
+    public var pinchDelivery: PinchDelivery
 
     private var isDragging = false
     private var savedCursor: CGPoint?
 
     public init(timings: Timings = Timings(),
                 restoreCursor: Bool = true,
-                hideCursorDuringClick: Bool = true) {
+                hideCursorDuringClick: Bool = true,
+                pinchDelivery: PinchDelivery = .magnify) {
         self.timings = timings
         self.restoreCursor = restoreCursor
         self.hideCursorDuringClick = hideCursorDuringClick
+        self.pinchDelivery = pinchDelivery
     }
 
     public func perform(_ event: GestureEvent) {
@@ -47,6 +50,7 @@ public final class CGEventSink: EventSink {
         case .dragMoved(let p):   moveDrag(to: p)
         case .dragEnded(let p):   endDrag(at: p)
         case .scroll(let dx, let dy, _): scroll(dx: dx, dy: dy)
+        case .pinch(let magnification, let p): pinch(magnification, at: p)
         }
     }
 
@@ -111,6 +115,46 @@ public final class CGEventSink: EventSink {
                               wheel2: Int32(dx.rounded()),
                               wheel3: 0) else { return }
         e.post(tap: .cghidEventTap)
+    }
+
+    // MARK: - Pinch
+
+    private func pinch(_ magnification: CGFloat, at point: CGPoint) {
+        switch pinchDelivery {
+        case .magnify:       postMagnify(magnification)
+        case .commandScroll: postCommandScroll(magnification)
+        }
+    }
+
+    /// Synthesises the magnify gesture AppKit delivers as `NSEvent.magnification`.
+    ///
+    /// CoreGraphics exposes no public constructor for gesture events, so the event
+    /// type and two fields are set numerically: type 29 is `NSEventTypeMagnify`,
+    /// field 110 carries the HID gesture type (61 = zoom) and field 113 the
+    /// magnification delta. These are stable in practice and are what every
+    /// trackpad-gesture utility on macOS uses, but they are undocumented — which is
+    /// why `PinchDelivery.commandScroll` exists as a public-API alternative.
+    private func postMagnify(_ magnification: CGFloat) {
+        guard let event = CGEvent(source: nil),
+              let magnifyType = CGEventType(rawValue: 29),
+              let gestureTypeField = CGEventField(rawValue: 110),
+              let magnitudeField = CGEventField(rawValue: 113) else { return }
+        event.type = magnifyType
+        event.setIntegerValueField(gestureTypeField, value: 61)
+        event.setDoubleValueField(magnitudeField, value: Double(magnification))
+        event.post(tap: .cghidEventTap)
+    }
+
+    /// Command-scroll, which almost every app interprets as zoom.
+    private func postCommandScroll(_ magnification: CGFloat) {
+        // Scale the fractional magnification up into scroll units.
+        let ticks = Int32((magnification * 60).rounded())
+        guard ticks != 0,
+              let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel,
+                                  wheelCount: 1, wheel1: ticks, wheel2: 0, wheel3: 0)
+        else { return }
+        event.flags = .maskCommand
+        event.post(tap: .cghidEventTap)
     }
 
     // MARK: - Primitives

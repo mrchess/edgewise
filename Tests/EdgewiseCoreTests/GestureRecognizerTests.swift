@@ -144,3 +144,74 @@ struct GestureRecognizerTests {
         #expect(r.ingest(lift(at: 1)).isEmpty)
     }
 }
+
+@Suite("Pinch to zoom")
+struct PinchTests {
+    func input(_ points: [CGPoint], at t: TimeInterval) -> GestureInput {
+        GestureInput(contacts: points.enumerated().map {
+            MappedContact(id: $0.offset, point: $0.element) }, timestamp: t)
+    }
+
+    /// The panel reports Contact ID [0...15] and Contact Count Maximum 15, so genuine
+    /// multi-finger gestures are available on this hardware.
+    @Test("fingers moving apart zoom in")
+    func spreadZoomsIn() {
+        var r = GestureRecognizer()
+        _ = r.ingest(input([CGPoint(x: 400, y: 300), CGPoint(x: 500, y: 300)], at: 0))
+        let events = r.ingest(input([CGPoint(x: 350, y: 300), CGPoint(x: 550, y: 300)], at: 0.05))
+        guard case .pinch(let magnification, _) = events.first else {
+            Issue.record("expected a pinch, got \(events)"); return
+        }
+        #expect(magnification > 0, "spreading fingers must zoom in")
+    }
+
+    @Test("fingers moving together zoom out")
+    func pinchZoomsOut() {
+        var r = GestureRecognizer()
+        _ = r.ingest(input([CGPoint(x: 350, y: 300), CGPoint(x: 550, y: 300)], at: 0))
+        let events = r.ingest(input([CGPoint(x: 430, y: 300), CGPoint(x: 470, y: 300)], at: 0.05))
+        guard case .pinch(let magnification, _) = events.first else {
+            Issue.record("expected a pinch, got \(events)"); return
+        }
+        #expect(magnification < 0, "closing fingers must zoom out")
+    }
+
+    /// The distinction that matters: two fingers sliding as a unit is a scroll, not a
+    /// zoom, even though both are two-finger gestures.
+    @Test("two fingers sliding together scroll rather than zoom")
+    func translationIsNotAPinch() {
+        var r = GestureRecognizer()
+        _ = r.ingest(input([CGPoint(x: 400, y: 300), CGPoint(x: 500, y: 300)], at: 0))
+        let events = r.ingest(input([CGPoint(x: 400, y: 380), CGPoint(x: 500, y: 380)], at: 0.05))
+        #expect(events.count == 1)
+        if case .pinch = events[0] { Issue.record("a pure translation must not zoom") }
+    }
+
+    @Test("separation changes below the threshold are ignored as noise")
+    func smallSpreadIsNoise() {
+        var r = GestureRecognizer()
+        _ = r.ingest(input([CGPoint(x: 400, y: 300), CGPoint(x: 500, y: 300)], at: 0))
+        let events = r.ingest(input([CGPoint(x: 399, y: 300), CGPoint(x: 501, y: 300)], at: 0.05))
+        #expect(!events.contains { if case .pinch = $0 { true } else { false } })
+    }
+
+    @Test("pinch can be turned off, leaving scrolling intact")
+    func pinchDisabled() {
+        var config = GestureConfiguration()
+        config.pinchEnabled = false
+        var r = GestureRecognizer(configuration: config)
+        _ = r.ingest(input([CGPoint(x: 400, y: 300), CGPoint(x: 500, y: 300)], at: 0))
+        let events = r.ingest(input([CGPoint(x: 350, y: 300), CGPoint(x: 550, y: 300)], at: 0.05))
+        #expect(!events.contains { if case .pinch = $0 { true } else { false } })
+    }
+
+    @Test("a three-finger spread still registers as a pinch")
+    func threeFingerSpread() {
+        var r = GestureRecognizer()
+        _ = r.ingest(input([CGPoint(x: 400, y: 300), CGPoint(x: 500, y: 300),
+                            CGPoint(x: 450, y: 380)], at: 0))
+        let events = r.ingest(input([CGPoint(x: 340, y: 300), CGPoint(x: 560, y: 300),
+                                     CGPoint(x: 450, y: 440)], at: 0.05))
+        #expect(events.contains { if case .pinch = $0 { true } else { false } })
+    }
+}

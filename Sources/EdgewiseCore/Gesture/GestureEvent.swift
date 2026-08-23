@@ -9,6 +9,9 @@ public enum GestureEvent: Equatable, Sendable {
     case dragMoved(CGPoint)
     case dragEnded(CGPoint)
     case scroll(deltaX: CGFloat, deltaY: CGFloat, at: CGPoint)
+    /// `magnification` is a fractional change, matching AppKit's convention:
+    /// 0.1 means "10% larger". Negative pinches in.
+    case pinch(magnification: CGFloat, at: CGPoint)
 }
 
 /// One contact after mapping into screen space.
@@ -47,6 +50,13 @@ public struct GestureConfiguration: Equatable, Codable, Sendable {
     public var naturalScrolling: Bool = true
     /// Emit right-click on long press at all.
     public var longPressRightClick: Bool = true
+    /// Pinch-to-zoom, when two contacts change their separation.
+    public var pinchEnabled: Bool = true
+    /// Separation must change by this many points before a pinch is reported, which
+    /// keeps an ordinary two-finger scroll from drifting into a zoom.
+    public var pinchThreshold: CGFloat = 2.5
+    /// Multiplier on the reported magnification.
+    public var pinchScale: CGFloat = 1.0
 
     public init() {}
 }

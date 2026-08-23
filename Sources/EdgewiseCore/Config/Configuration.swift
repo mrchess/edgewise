@@ -17,6 +17,7 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var logicalMaxX: Int?
     public var logicalMaxY: Int?
 
+    public var pinchDelivery: PinchDelivery = .magnify
     public var restoreCursor: Bool = true
     public var hideCursorDuringClick: Bool = true
     public var startAtLogin: Bool = true

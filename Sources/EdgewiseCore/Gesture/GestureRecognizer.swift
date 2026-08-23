@@ -17,7 +17,9 @@ public struct GestureRecognizer: Sendable {
         case dragging(current: CGPoint)
         /// Long press already fired; ignore everything until release.
         case longPressed
-        case scrolling(previousCentroid: CGPoint)
+        /// Two or more contacts down. Tracks both how the group is moving (scroll)
+        /// and how far apart it is (pinch).
+        case scrolling(previousCentroid: CGPoint, previousSpread: CGFloat)
     }
 
     public private(set) var state: State = .idle
@@ -91,9 +93,9 @@ public struct GestureRecognizer: Sendable {
             return []
 
         case .scrolling:
-            // Second finger lifted mid-scroll; end the scroll and ignore the
-            // remaining contact until it lifts, so the leftover finger cannot
-            // turn a scroll into an accidental drag.
+            // Second finger lifted mid-gesture; ignore the remaining contact until it
+            // lifts too, so the leftover finger cannot turn a scroll or pinch into an
+            // accidental drag.
             state = .longPressed
             return []
         }
@@ -114,26 +116,42 @@ public struct GestureRecognizer: Sendable {
     // MARK: - Two contacts
 
     private mutating func handleMultiContact(_ input: GestureInput) -> [GestureEvent] {
-        let centroid = Self.centroid(of: input.contacts.map(\.point))
+        let points = input.contacts.map(\.point)
+        let centroid = Self.centroid(of: points)
+        let spread = Self.spread(of: points, about: centroid)
 
         switch state {
-        case .scrolling(let previous):
-            var dx = centroid.x - previous.x
-            var dy = centroid.y - previous.y
-            state = .scrolling(previousCentroid: centroid)
+        case .scrolling(let previousCentroid, let previousSpread):
+            let dSpread = spread - previousSpread
+            let dx = centroid.x - previousCentroid.x
+            let dy = centroid.y - previousCentroid.y
+            state = .scrolling(previousCentroid: centroid, previousSpread: spread)
+
+            // Fingers moving apart or together is a pinch; the group sliding as a unit
+            // is a scroll. Comparing the two magnitudes keeps a gesture from flickering
+            // between the pair when it is a bit of both.
+            let translation = (dx * dx + dy * dy).squareRoot()
+            if configuration.pinchEnabled,
+               abs(dSpread) > configuration.pinchThreshold,
+               abs(dSpread) > translation,
+               previousSpread > 1 {
+                let magnification = (dSpread / previousSpread) * configuration.pinchScale
+                return [.pinch(magnification: magnification, at: centroid)]
+            }
+
             guard dx != 0 || dy != 0 else { return [] }
-            dx *= configuration.scrollScale
-            dy *= configuration.scrollScale
-            if !configuration.naturalScrolling { dx = -dx; dy = -dy }
-            return [.scroll(deltaX: dx, deltaY: dy, at: centroid)]
+            var scrollX = dx * configuration.scrollScale
+            var scrollY = dy * configuration.scrollScale
+            if !configuration.naturalScrolling { scrollX = -scrollX; scrollY = -scrollY }
+            return [.scroll(deltaX: scrollX, deltaY: scrollY, at: centroid)]
 
         case .dragging(let current):
             // A second finger landed mid-drag. Finish the drag cleanly first.
-            state = .scrolling(previousCentroid: centroid)
+            state = .scrolling(previousCentroid: centroid, previousSpread: spread)
             return [.dragEnded(current)]
 
         default:
-            state = .scrolling(previousCentroid: centroid)
+            state = .scrolling(previousCentroid: centroid, previousSpread: spread)
             return []
         }
     }
@@ -160,6 +178,17 @@ public struct GestureRecognizer: Sendable {
     private func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
         let dx = a.x - b.x, dy = a.y - b.y
         return (dx * dx + dy * dy).squareRoot()
+    }
+
+    /// Mean distance of the contacts from their centroid. Works for any number of
+    /// fingers, unlike the distance between two specific points.
+    static func spread(of points: [CGPoint], about centroid: CGPoint) -> CGFloat {
+        guard points.count > 1 else { return 0 }
+        let total = points.reduce(CGFloat(0)) { sum, p in
+            let dx = p.x - centroid.x, dy = p.y - centroid.y
+            return sum + (dx * dx + dy * dy).squareRoot()
+        }
+        return total / CGFloat(points.count)
     }
 
     static func centroid(of points: [CGPoint]) -> CGPoint {

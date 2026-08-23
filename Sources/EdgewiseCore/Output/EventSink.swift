@@ -23,3 +23,14 @@ public enum DeliveryMode: String, Codable, Sendable, CaseIterable {
     /// Post events straight to the window under the finger. The cursor never moves.
     case background
 }
+
+/// How a pinch reaches the application.
+public enum PinchDelivery: String, Codable, Sendable, CaseIterable {
+    /// A real trackpad-style magnify gesture. Best fidelity — smooth zooming in
+    /// Preview, Photos, Maps and Safari — but it relies on undocumented CoreGraphics
+    /// gesture fields, so it can break on a future macOS.
+    case magnify
+    /// Command-scroll, which nearly every app treats as zoom. Coarser, but built
+    /// entirely on public API and effectively guaranteed to keep working.
+    case commandScroll
+}

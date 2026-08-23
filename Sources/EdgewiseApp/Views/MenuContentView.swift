@@ -36,6 +36,11 @@ struct MenuContentView: View {
             set: { driver.configuration.gesture.scrollEnabled = $0 }
         ))
 
+        Toggle("Pinch to zoom", isOn: Binding(
+            get: { driver.configuration.gesture.pinchEnabled },
+            set: { driver.configuration.gesture.pinchEnabled = $0 }
+        ))
+
         Divider()
 
         Button("Settings…") { openWindow(id: "main") }

@@ -39,7 +39,9 @@ public final class BackgroundEventSink: EventSink {
             isDragging = true
             fallback.perform(event)
             if case .dragEnded = event { isDragging = false }
-        case .scroll:
+        case .scroll, .pinch:
+            // Scroll and zoom are global gestures; per-process posting cannot
+            // express them, so they go through the HID tap either way.
             fallback.perform(event)
         }
     }

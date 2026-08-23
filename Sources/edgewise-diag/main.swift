@@ -206,6 +206,8 @@ func describe(_ event: GestureEvent) -> String {
     case .dragEnded(let a):  return "drag ended  \(p(a))"
     case .scroll(let dx, let dy, let a):
         return "scroll      d(\(Int(dx)), \(Int(dy))) at \(p(a))"
+    case .pinch(let magnification, let a):
+        return String(format: "pinch       %+.3f at %@", magnification, p(a))
     }
 }
 

@@ -89,6 +89,24 @@ struct SettingsView: View {
                         get: { driver.configuration.gesture.naturalScrolling },
                         set: { driver.configuration.gesture.naturalScrolling = $0 }))
                 }
+
+                Toggle("Pinch to zoom", isOn: Binding(
+                    get: { driver.configuration.gesture.pinchEnabled },
+                    set: { driver.configuration.gesture.pinchEnabled = $0 }))
+
+                if driver.configuration.gesture.pinchEnabled {
+                    Picker("Zoom using", selection: Binding(
+                        get: { driver.configuration.pinchDelivery },
+                        set: { driver.configuration.pinchDelivery = $0; driver.restart() })) {
+                        Text("Trackpad zoom gesture").tag(PinchDelivery.magnify)
+                        Text("Command-scroll").tag(PinchDelivery.commandScroll)
+                    }
+                    Text(driver.configuration.pinchDelivery == .magnify
+                         ? "Smoothest in Preview, Photos, Maps and Safari."
+                         : "Works almost everywhere, but zooms in steps.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("General") {
