@@ -92,20 +92,21 @@ An independent MIT implementation that draws on prior MIT-licensed work:
 
 ## Panel resolution
 
-The native 2560×720 renders text very small. macOS advertises a Retina mode for the
-panel — 1280×360 logical, backed by the full 2560×720 — but marks it unusable for the
-desktop GUI, so it never appears in System Settings. It works perfectly well; Edgewise
-just sets it.
-
-Settings → Resolution lists only modes matching the panel's own shape, because it also
-advertises a pile of 4:3 and 16:9 sizes it can only letterbox or stretch. Switching
+Settings → Resolution lists the panel's resolutions, restricted to its own 32:9 shape —
+it also advertises 4:3 and 16:9 sizes it can only letterbox or stretch. Switching
 re-resolves the touch mapping straight away, so taps keep landing correctly.
 
-A true scaled mode such as 1920×540 is not advertised by the panel at all and cannot be
-selected by any application; that needs an EDID override or a tool like BetterDisplay.
-Brightness and colour are not Edgewise's business either — the panel does answer
-DDC/CI, so [MonitorControl](https://github.com/MonitorControl/MonitorControl) is the
-right tool.
+**On the Xeneon Edge there is nothing to choose.** The native 2560×720 renders text
+very small, and macOS does list a half-size Retina mode for the panel (1280×360 logical,
+backed by the full 2560×720) — but flags it unusable for the desktop GUI and then
+*refuses to set it*. Both `CGDisplaySetDisplayMode` and a display configuration
+transaction return `kCGErrorIllegalArgument`. The flag is a hard gate, not a hint about
+where the mode appears in System Settings, so no application can select it.
+
+Larger text on this panel therefore needs an EDID override or a tool like
+[BetterDisplay](https://github.com/waydabber/BetterDisplay), which work below that gate.
+Brightness and colour are out of scope too; the panel answers DDC/CI, so
+[MonitorControl](https://github.com/MonitorControl/MonitorControl) is the right tool.
 
 ## Configuration
 

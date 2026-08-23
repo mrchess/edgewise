@@ -202,13 +202,23 @@ struct DisplayModeCatalogTests {
         #expect(kept.map(\.id) == [1])
     }
 
-    @Test("the hidden Retina mode is kept")
-    func retinaModeKept() {
-        let retina = mode(2, 1280, 360, px: 2560, py: 720, usable: false)
+    /// macOS returns kCGErrorIllegalArgument for any mode flagged unusable for the
+    /// desktop GUI, by either public API. Offering one would be a control that
+    /// silently does nothing — which is exactly what shipped before this test existed.
+    @Test("modes macOS refuses to set are not offered")
+    func unsettableModeExcluded() {
+        let hiddenRetina = mode(2, 1280, 360, px: 2560, py: 720, usable: false)
+        let kept = DisplayModeCatalog.curate([mode(1, 2560, 720), hiddenRetina],
+                                             nativeAspect: native, current: nil)
+        #expect(kept.map(\.id) == [1])
+    }
+
+    @Test("a settable Retina mode is offered")
+    func settableRetinaKept() {
+        let retina = mode(2, 1280, 360, px: 2560, py: 720, usable: true)
         let kept = DisplayModeCatalog.curate([mode(1, 2560, 720), retina],
                                              nativeAspect: native, current: nil)
         #expect(kept.count == 2)
-        #expect(kept.contains(retina))
         #expect(retina.isHiDPI)
     }
 
@@ -225,7 +235,7 @@ struct DisplayModeCatalogTests {
     @Test("largest is listed first")
     func sortedLargestFirst() {
         let kept = DisplayModeCatalog.curate(
-            [mode(2, 1280, 360, px: 2560, py: 720), mode(1, 2560, 720)],
+            [mode(2, 1280, 360, px: 2560, py: 720, usable: true), mode(1, 2560, 720)],
             nativeAspect: native, current: nil)
         #expect(kept.first?.width == 2560)
     }

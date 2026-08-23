@@ -41,10 +41,19 @@ public struct DisplayMode: Equatable, Identifiable, Sendable {
 
 /// Chooses which of a display's modes are worth offering.
 ///
-/// A 32:9 panel advertises a pile of 4:3 and 16:9 modes it cannot show without
-/// letterboxing or stretching, so listing everything is worse than useless. Only modes
-/// close to the panel's own shape are offered — plus whatever is currently set, which
-/// must always be selectable even if it would otherwise be filtered out.
+/// Two filters, for different reasons.
+///
+/// Shape: a 32:9 panel advertises a pile of 4:3 and 16:9 modes it cannot show without
+/// letterboxing or stretching, so listing everything is worse than useless.
+///
+/// Settability: modes flagged unusable for the desktop GUI are excluded, because macOS
+/// refuses to set them. Both `CGDisplaySetDisplayMode` and a configuration transaction
+/// return `kCGErrorIllegalArgument` (1001) for such a mode — the flag is a hard gate,
+/// not a hint about where it appears in System Settings. Offering one would be offering
+/// a control that silently does nothing.
+///
+/// Whatever is currently set is always offered regardless, so the picker can show the
+/// truth and the user can always get back.
 public enum DisplayModeCatalog {
     /// Fraction by which a mode's aspect ratio may differ from the panel's.
     public static let aspectTolerance = 0.06
@@ -53,7 +62,7 @@ public enum DisplayModeCatalog {
                               nativeAspect: Double,
                               current: DisplayMode?) -> [DisplayMode] {
         var kept = modes.filter { mode in
-            guard mode.aspectRatio > 0 else { return false }
+            guard mode.aspectRatio > 0, mode.isUsableForDesktopGUI else { return false }
             return abs(mode.aspectRatio - nativeAspect) / nativeAspect <= aspectTolerance
         }
         if let current, !kept.contains(current) { kept.append(current) }

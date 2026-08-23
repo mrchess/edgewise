@@ -54,10 +54,7 @@ struct SettingsView: View {
             }
 
             Section("Resolution") {
-                if driver.availableModes.isEmpty {
-                    Text("Connect the panel to change its resolution.")
-                        .foregroundStyle(.secondary)
-                } else {
+                if driver.availableModes.count > 1 {
                     Picker("Panel resolution", selection: Binding(
                         get: { driver.currentMode?.id ?? -1 },
                         set: { id in
@@ -69,13 +66,18 @@ struct SettingsView: View {
                             Text(mode.label).tag(mode.id)
                         }
                     }
+                } else if let current = driver.currentMode {
+                    LabeledContent("Panel resolution", value: current.label)
                     Text("""
-                    The native resolution renders text very small. The Retina option is \
-                    the same pixels at half the logical size — crisp, but shows less. \
-                    macOS hides it from System Settings; it works anyway.
+                    This panel offers no other resolution at its own shape. macOS lists \
+                    a half-size Retina mode for it but refuses to set it, so no app can \
+                    select it — that needs an EDID override or a tool like BetterDisplay.
                     """)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                } else {
+                    Text("Connect the panel to see its resolution.")
+                        .foregroundStyle(.secondary)
                 }
             }
 
