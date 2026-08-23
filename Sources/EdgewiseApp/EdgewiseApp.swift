@@ -17,6 +17,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
+            // Two copies would both seize the panel and both inject clicks. launchd may
+            // already be running one, so a second launch defers to it rather than
+            // fighting over the device.
+            if let existing = Self.otherRunningInstance() {
+                existing.activate(options: [.activateAllWindows])
+                NSApp.terminate(nil)
+                return
+            }
+
             let services = AppServices.shared
 
             statusItem = StatusItemController(
@@ -43,6 +52,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             services.permissions.beginWatching()
         }
+    }
+
+    /// Another copy of this app already running, if any.
+    private static func otherRunningInstance() -> NSRunningApplication? {
+        guard let identifier = Bundle.main.bundleIdentifier else { return nil }
+        let mine = ProcessInfo.processInfo.processIdentifier
+        return NSRunningApplication.runningApplications(withBundleIdentifier: identifier)
+            .first { $0.processIdentifier != mine && !$0.isTerminated }
     }
 
     /// Releases the panel before the process goes away.

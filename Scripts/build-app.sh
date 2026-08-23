@@ -46,6 +46,37 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# A LaunchAgent inside the bundle, registered at runtime with SMAppService. This is
+# what buys restart-on-crash: a plain login item is started once at login and never
+# looked at again, whereas launchd relaunches this if the process dies unexpectedly.
+mkdir -p "$APP/Contents/Library/LaunchAgents"
+cat > "$APP/Contents/Library/LaunchAgents/$BUNDLE_ID.agent.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>$BUNDLE_ID.agent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Applications/Edgewise.app/Contents/MacOS/Edgewise</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <!-- Relaunch only after an unexpected exit, so choosing Quit stays honoured. -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    <key>LimitLoadToSessionType</key>
+    <string>Aqua</string>
+</dict>
+</plist>
+PLIST
+
 if [ -f Scripts/make-icon.swift ]; then
     echo "==> Generating icon"
     swift Scripts/make-icon.swift "$APP/Contents/Resources/AppIcon.icns" || \
