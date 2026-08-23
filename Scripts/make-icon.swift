@@ -3,26 +3,28 @@
 // Uses Assets/AppIcon.png when present, and otherwise draws a placeholder mark so the
 // repo always builds a complete app bundle without carrying binary assets.
 //
-// A supplied source that is fully opaque is treated as artwork needing macOS
-// treatment: it gets inset and clipped to the system squircle, matching how every
-// first-party icon sits on the canvas. A source with transparency is assumed to be
-// already shaped and is used as-is.
+// Supplied artwork is usually a full-bleed square with the rounded icon silhouette
+// already drawn in and the corners filled with flat colour. Drawing that as-is leaves
+// hard corner blocks; clipping it to a silhouette of our own leaves dark crescents
+// wherever the two radii disagree. So the artwork's own corner radius is measured and
+// used as the clip, which matches its shape exactly.
 import AppKit
 
 let arguments = CommandLine.arguments
 let output = arguments.count > 1 ? arguments[1] : "AppIcon.icns"
 let sourcePath = arguments.count > 2 ? arguments[2] : "Assets/AppIcon.png"
 
-// MARK: - Squircle
+// MARK: - Icon silhouette
 
-/// Apple's icon silhouette is a continuous-curvature rounded rectangle, not a plain
-/// one. `NSBezierPath` has no continuous-corner API, so this approximates it with the
-/// same cubic construction Core Animation uses.
-func squircle(in rect: NSRect) -> NSBezierPath {
-    let radius = rect.width * 0.2237   // macOS icon corner ratio
-    let limit = min(rect.width, rect.height) / 2
-    let r = min(radius, limit)
-    let k = r * 0.1288                 // continuous-curvature control offset
+/// Apple's icon shape is a continuous-curvature rounded rectangle, not a plain one.
+/// `NSBezierPath` has no continuous-corner API, so this approximates it with the same
+/// cubic construction Core Animation uses.
+///
+/// `cornerRatio` is the corner radius as a fraction of the width. Apple's own icons
+/// use 0.2237; artwork with a different radius passes its own.
+func squircle(in rect: NSRect, cornerRatio: CGFloat = 0.2237) -> NSBezierPath {
+    let r = min(rect.width * cornerRatio, min(rect.width, rect.height) / 2)
+    let k = r * 0.1288   // continuous-curvature control-point offset
 
     let path = NSBezierPath()
     let minX = rect.minX, maxX = rect.maxX, minY = rect.minY, maxY = rect.maxY
@@ -46,6 +48,69 @@ func squircle(in rect: NSRect) -> NSBezierPath {
                controlPoint2: NSPoint(x: minX + k, y: minY))
     path.close()
     return path
+}
+
+// MARK: - Artwork inspection
+
+/// The corner radius the artist drew, as a fraction of the image width.
+///
+/// Along the very top row of a rounded rectangle the shape's flat edge begins exactly
+/// one radius in from the left, so scanning that row inward locates the radius.
+///
+/// The subtlety is what counts as "the shape". Icon art is usually drawn with a soft
+/// shadow or vignette outside the silhouette, so the first pixel that merely *differs*
+/// from the corner colour lands partway into that shadow and measures the radius far
+/// too small — which then leaves a dark crescent when used as a clip. Instead this
+/// scans for the point where the pixel arrives at the artwork's own interior colour,
+/// which is the true edge of the solid shape.
+///
+/// Returns nil when the row never resolves, meaning the artwork is not a rounded
+/// shape sitting on a flat ground.
+func measuredCornerRatio(of rep: NSBitmapImageRep) -> CGFloat? {
+    let width = rep.pixelsWide, height = rep.pixelsHigh
+    guard width > 16, height > 16 else { return nil }
+
+    // A row just inside the top edge, and the interior colour along it.
+    let probeY = max(height / 40, 2)
+    guard let interior = rep.colorAt(x: width / 2, y: probeY),
+          let corner = rep.colorAt(x: 0, y: 0) else { return nil }
+
+    // If the corner already matches the interior there is no distinct shape to find.
+    let cornerDelta = abs(corner.redComponent - interior.redComponent)
+        + abs(corner.greenComponent - interior.greenComponent)
+        + abs(corner.blueComponent - interior.blueComponent)
+    guard cornerDelta > 0.05 else { return nil }
+
+    func reachedInterior(_ x: Int) -> Bool {
+        guard let colour = rep.colorAt(x: x, y: probeY) else { return false }
+        return abs(colour.redComponent - interior.redComponent) < 0.035
+            && abs(colour.greenComponent - interior.greenComponent) < 0.035
+            && abs(colour.blueComponent - interior.blueComponent) < 0.035
+    }
+
+    var x = 0
+    while x < width / 2, !reachedInterior(x) { x += 1 }
+    guard x > 0, x < width / 2 else { return nil }
+
+    // The probe row sits slightly below the top edge, so the shape has already begun
+    // curving inward there and x slightly overstates the radius — which is the safe
+    // direction to err: a marginally rounder clip removes shadow rather than leaving it.
+    return CGFloat(x) / CGFloat(width)
+}
+
+/// True when every sampled pixel is opaque, meaning the artwork is a full-bleed square
+/// rather than something already cut out with an alpha channel.
+func isFullyOpaque(_ rep: NSBitmapImageRep) -> Bool {
+    guard rep.hasAlpha else { return true }
+    let stepX = max(rep.pixelsWide / 32, 1), stepY = max(rep.pixelsHigh / 32, 1)
+    for x in stride(from: 0, to: rep.pixelsWide, by: stepX) {
+        for y in stride(from: 0, to: rep.pixelsHigh, by: stepY) {
+            if let colour = rep.colorAt(x: x, y: y), colour.alphaComponent < 0.99 {
+                return false
+            }
+        }
+    }
+    return true
 }
 
 // MARK: - Placeholder artwork
@@ -83,34 +148,33 @@ func drawPlaceholder(size: CGFloat) {
                                 width: dot * 2, height: dot * 2)).fill()
 }
 
-// MARK: - Rendering
+// MARK: - Set-up
 
 let source = NSImage(contentsOfFile: sourcePath)
-if source != nil {
-    print("using artwork from \(sourcePath)")
-} else {
-    print("no artwork at \(sourcePath) — drawing placeholder")
-}
+let sourceRep: NSBitmapImageRep? = source
+    .flatMap(\.tiffRepresentation)
+    .flatMap(NSBitmapImageRep.init(data:))
 
-/// True when every pixel is opaque, meaning the artwork is a full-bleed square that
-/// still needs to be inset and clipped to the icon silhouette.
-func isFullyOpaque(_ image: NSImage) -> Bool {
-    guard let tiff = image.tiffRepresentation,
-          let rep = NSBitmapImageRep(data: tiff) else { return true }
-    guard rep.hasAlpha else { return true }
-    let stepX = max(rep.pixelsWide / 32, 1), stepY = max(rep.pixelsHigh / 32, 1)
-    for x in stride(from: 0, to: rep.pixelsWide, by: stepX) {
-        for y in stride(from: 0, to: rep.pixelsHigh, by: stepY) {
-            if let colour = rep.colorAt(x: x, y: y), colour.alphaComponent < 0.99 {
-                return false
-            }
-        }
+/// Nil when the artwork already carries its own alpha and should be drawn untouched.
+let clipRatio: CGFloat? = {
+    guard let sourceRep, isFullyOpaque(sourceRep) else { return nil }
+    let measured = measuredCornerRatio(of: sourceRep)
+    if let measured {
+        print(String(format: "artwork corner radius measured at %.1f%% of width", measured * 100))
+    } else {
+        print("could not measure a corner radius — using the standard macOS silhouette")
     }
-    return true
+    return measured ?? 0.2237
+}()
+
+if source == nil {
+    print("no artwork at \(sourcePath) — drawing placeholder")
+} else {
+    print("using artwork from \(sourcePath)")
+    if clipRatio == nil { print("artwork has an alpha channel — drawing it as-is") }
 }
 
-let needsShaping = source.map(isFullyOpaque) ?? false
-if needsShaping { print("artwork is opaque — insetting and clipping to the icon shape") }
+// MARK: - Rendering
 
 func render(size: CGFloat) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size),
@@ -121,18 +185,21 @@ func render(size: CGFloat) -> Data {
     NSGraphicsContext.current?.imageInterpolation = .high
 
     if let source {
-        if needsShaping {
-            // macOS icon artwork occupies ~82% of the canvas, centred.
-            let inset = size * 0.09
-            let box = NSRect(x: inset, y: inset,
-                             width: size - inset * 2, height: size - inset * 2)
+        // macOS icon artwork occupies ~82% of its canvas, centred, leaving the
+        // breathing room every first-party icon has in the Dock.
+        let inset = size * 0.09
+        let box = NSRect(x: inset, y: inset,
+                         width: size - inset * 2, height: size - inset * 2)
+
+        if let clipRatio {
             NSGraphicsContext.saveGraphicsState()
-            squircle(in: box).addClip()
+            // Clipping at the artwork's own measured radius follows the silhouette it
+            // was drawn with, so no flat corner colour survives and no gap opens up.
+            squircle(in: box, cornerRatio: clipRatio).addClip()
             source.draw(in: box, from: .zero, operation: .sourceOver, fraction: 1)
             NSGraphicsContext.restoreGraphicsState()
         } else {
-            source.draw(in: NSRect(x: 0, y: 0, width: size, height: size),
-                        from: .zero, operation: .sourceOver, fraction: 1)
+            source.draw(in: box, from: .zero, operation: .sourceOver, fraction: 1)
         }
     } else {
         drawPlaceholder(size: size)
