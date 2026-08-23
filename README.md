@@ -22,9 +22,14 @@ control on the panel without losing your place on the main display.
 2. Drag Edgewise to Applications.
 3. Open it. It walks you through the two permissions macOS requires.
 
-No Terminal, no shell script, no LaunchAgent to hand-edit. Start-at-login uses
-`SMAppService`, so the login item appears in System Settings → General → Login Items
-and you can revoke it there. To uninstall, drag the app to the Trash.
+Edgewise runs invisibly — no Dock icon, no menu bar item, no window unless you ask for
+one. Open it again from Applications to reach its settings; that works whether or not it
+is already running.
+
+No Terminal, no shell script, no LaunchAgent to hand-edit. Start-at-login registers a
+LaunchAgent from inside the bundle via `SMAppService`, so it appears in System Settings →
+General → Login Items, can be revoked there, and is relaunched by launchd if it ever
+crashes. To uninstall, drag the app to the Trash.
 
 ## Requirements
 
@@ -118,7 +123,7 @@ Everything is in the app's settings. The underlying file lives at
 | Long press | 0.5s | Set to taste, or turn right-click off |
 | Drag threshold | 4pt | How far a finger moves before a tap becomes a drag |
 | Two-finger scroll | on | Natural direction by default |
-| Momentum | on | Flick and it coasts |
+| Momentum | on | Flick and it coasts (needs a panel that reports two fingers) |
 | Pinch to zoom | on | `magnify` gesture, or `commandScroll` for maximum compatibility |
 | Display | auto | Pin the panel explicitly if detection picks wrong |
 

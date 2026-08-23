@@ -42,13 +42,38 @@ struct CoordinateMapperTests {
         #expect(high.y < 1440 + 720)
     }
 
-    @Test("a flipped panel mirrors both axes")
-    func flippedPanel() {
-        var flipped = offsetPanel
-        flipped.isFlipped = true
-        let p = flipped.map(rawX: 0, rawY: 0)
+    /// Rotation comes from `CGDisplayRotation`, so rotating the panel in System
+    /// Settings carries the touch mapping with it instead of needing a second switch
+    /// somebody has to remember to match.
+    @Test("a panel rotated 180° maps the origin to the opposite corner")
+    func rotatedHalfTurn() {
+        var rotated = offsetPanel
+        rotated.rotation = 180
+        let p = rotated.map(rawX: 0, rawY: 0)
         #expect(p.x > 880 + 2550)
         #expect(p.y > 1440 + 710)
+    }
+
+    @Test("quarter turns stay inside the display")
+    func quarterTurnsStayOnPanel() {
+        for angle in [90, 270] {
+            var rotated = offsetPanel
+            rotated.rotation = angle
+            for (x, y) in [(0, 0), (16383, 0), (0, 9599), (16383, 9599)] {
+                let p = rotated.map(rawX: x, rawY: y)
+                #expect(p.x >= 880 && p.x < 880 + 2560, "\(angle)° escaped: \(p)")
+                #expect(p.y >= 1440 && p.y < 1440 + 720, "\(angle)° escaped: \(p)")
+            }
+        }
+    }
+
+    @Test("an unrotated panel is unchanged, and odd angles are ignored")
+    func rotationNormalises() {
+        var plain = offsetPanel
+        plain.rotation = 0
+        var full = offsetPanel
+        full.rotation = 360
+        #expect(plain.map(rawX: 500, rawY: 500) == full.map(rawX: 500, rawY: 500))
     }
 
     @Test("a degenerate logical range does not divide by zero")

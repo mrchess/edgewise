@@ -9,15 +9,7 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var gesture = GestureConfiguration()
 
     /// Remembered so the right display is found again after a replug or reorder.
-    /// Ignore contacts too large to be a fingertip. Off by default: it needs a panel
-    /// that reports contact size, which the Xeneon Edge does not.
-    public var palmRejectionEnabled: Bool = false
-    /// Largest contact patch still treated as a finger, on the panel's 0...10 scale.
-    public var maximumContactSize: Int = 6
-
     public var displayIdentity: DisplayIdentity?
-    /// Panel mounted upside down.
-    public var isFlipped: Bool = false
     /// Calibration overrides. Left nil, the descriptor's own logical max is used.
     public var logicalMaxX: Int?
     public var logicalMaxY: Int?
@@ -25,9 +17,6 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var pinchDelivery: PinchDelivery = .magnify
     public var restoreCursor: Bool = true
     public var startAtLogin: Bool = true
-    /// Show the menu bar icon. With it hidden, Edgewise runs completely invisibly and
-    /// is reached by opening the app again from Applications.
-    public var showMenuBarIcon: Bool = true
 
     public init() {}
 

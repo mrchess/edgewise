@@ -1,3 +1,4 @@
+import AppKit
 import EdgewiseCore
 import SwiftUI
 
@@ -5,6 +6,8 @@ struct SettingsView: View {
     @EnvironmentObject private var driver: DriverController
     @EnvironmentObject private var loginItem: LoginItem
     @State private var loginItemError: String?
+
+    private var defaultLongPress: TimeInterval { GestureConfiguration().longPressDelay }
 
     var body: some View {
         Form {
@@ -22,35 +25,29 @@ struct SettingsView: View {
                     set: { $0 ? driver.start() : driver.stop() }))
             }
 
-            Section("Touch panel") {
-                Toggle("Ignore palms and resting hands", isOn: Binding(
-                    get: { driver.configuration.palmRejectionEnabled },
-                    set: { driver.configuration.palmRejectionEnabled = $0 }))
-                .help("""
-                Ignores contacts too large to be a fingertip. Requires a panel that \
-                reports contact size — the Xeneon Edge does not, so this has no \
-                effect on it.
-                """)
-
-                Picker("Display", selection: Binding(
-                    get: { driver.configuration.displayIdentity },
-                    set: { identity in
-                        driver.configuration.displayIdentity = identity
-                        driver.restart()
-                    })) {
-                    Text("Detect automatically").tag(DisplayIdentity?.none)
-                    ForEach(driver.availableDisplays, id: \.id) { display in
-                        Text(label(for: display)).tag(Optional(DisplayIdentity(display)))
+            // Only offered when detection has failed. When the panel is found — by name,
+            // or by its exact size — there is nothing to choose and a picker would just
+            // invite someone to break a working setup.
+            if !driver.isRunning {
+                Section("Touch panel") {
+                    Picker("Panel display", selection: Binding(
+                        get: { driver.configuration.displayIdentity },
+                        set: { identity in
+                            driver.configuration.displayIdentity = identity
+                            driver.restart()
+                        })) {
+                        Text("Detect automatically").tag(DisplayIdentity?.none)
+                        ForEach(driver.availableDisplays, id: \.id) { display in
+                            Text(label(for: display)).tag(Optional(DisplayIdentity(display)))
+                        }
                     }
+                    Text("""
+                    Edgewise could not identify the panel on its own. Pick it here and \
+                    it will be remembered.
+                    """)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .help("""
-                Pin the panel explicitly if you have several displays, or if the wrong \
-                one is being used.
-                """)
-
-                Toggle("Panel is mounted upside down", isOn: Binding(
-                    get: { driver.configuration.isFlipped },
-                    set: { driver.configuration.isFlipped = $0; driver.restart() }))
             }
 
             Section("Behaviour") {
@@ -60,9 +57,8 @@ struct SettingsView: View {
 
                 if driver.configuration.gesture.longPressRightClick {
                     LabeledContent("Hold for") {
-                        HStack {
-                            // Stepped so the drag lands on repeatable values — this is
-                            // a threshold people tune to a feel and then leave alone.
+                        HStack(spacing: 10) {
+                            // Stepped so a drag lands on repeatable values.
                             Slider(value: Binding(
                                 get: { driver.configuration.gesture.longPressDelay },
                                 set: { driver.configuration.gesture.longPressDelay = $0 }),
@@ -70,6 +66,10 @@ struct SettingsView: View {
                             Text("\(driver.configuration.gesture.longPressDelay, specifier: "%.2f")s")
                                 .monospacedDigit()
                                 .frame(width: 46, alignment: .trailing)
+                            Button("Reset") {
+                                driver.configuration.gesture.longPressDelay = defaultLongPress
+                            }
+                            .disabled(driver.configuration.gesture.longPressDelay == defaultLongPress)
                         }
                     }
                 }
@@ -98,8 +98,7 @@ struct SettingsView: View {
                 } else {
                     Text("""
                     This panel reports one finger at a time, so two-finger scroll, \
-                    two-finger tap and pinch are unavailable. It describes a ten-finger \
-                    digitizer but never transmits on it — see the project page for why.
+                    two-finger tap and pinch are unavailable.
                     """)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -107,19 +106,6 @@ struct SettingsView: View {
             }
 
             Section("General") {
-                Toggle("Show icon in the menu bar", isOn: Binding(
-                    get: { driver.configuration.showMenuBarIcon },
-                    set: { driver.configuration.showMenuBarIcon = $0 }))
-
-                if !driver.configuration.showMenuBarIcon {
-                    Text("""
-                    Edgewise now runs with no icon anywhere. To get back to these \
-                    settings, open Edgewise again from your Applications folder.
-                    """)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-
                 Toggle("Open at login", isOn: Binding(
                     get: { loginItem.isEnabled },
                     set: { loginItemError = loginItem.set($0) }))
@@ -127,6 +113,13 @@ struct SettingsView: View {
                     Text(loginItemError).font(.caption).foregroundStyle(.orange)
                 }
                 LabeledContent("Version", value: EdgewiseVersion.current)
+
+                // The only way out. With no menu bar item there is nowhere else to put
+                // it, and an app you cannot quit is an app you have to force quit.
+                HStack {
+                    Spacer()
+                    Button("Quit Edgewise") { NSApp.terminate(nil) }
+                }
             }
         }
         .formStyle(.grouped)

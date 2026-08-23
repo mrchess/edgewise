@@ -30,7 +30,6 @@ public final class Driver {
     private var mapper: CoordinateMapper?
     private var configuration: Configuration
     private var tickTimer: DispatchSourceTimer?
-    private var palmFilter: PalmFilter
     private var momentum = MomentumScroller()
     private var lastMomentumStep: TimeInterval = 0
     private var momentumOrigin: CGPoint = .zero
@@ -46,8 +45,6 @@ public final class Driver {
         self.monitor = monitor
         self.clock = clock
         self.recognizer = GestureRecognizer(configuration: configuration.gesture)
-        self.palmFilter = PalmFilter(isEnabled: configuration.palmRejectionEnabled,
-                                     maximumContactSize: configuration.maximumContactSize)
         self.momentum = MomentumScroller(
             deceleration: configuration.gesture.momentumDeceleration)
         self.sink = sink ?? Driver.makeSink(for: configuration)
@@ -111,8 +108,6 @@ public final class Driver {
     public func apply(_ newConfiguration: Configuration) {
         configuration = newConfiguration
         recognizer.configuration = newConfiguration.gesture
-        palmFilter = PalmFilter(isEnabled: newConfiguration.palmRejectionEnabled,
-                                maximumContactSize: newConfiguration.maximumContactSize)
         momentum.deceleration = newConfiguration.gesture.momentumDeceleration
         momentum.stop()
         sink.releaseAll()
@@ -131,7 +126,7 @@ public final class Driver {
             (sink as? CGEventSink)?.endMomentum()
         }
 
-        let contacts = palmFilter.filter(frame).activeContacts.map {
+        let contacts = frame.activeContacts.map {
             MappedContact(id: $0.contactID, point: mapper.map(rawX: $0.rawX, rawY: $0.rawY))
         }
         let input = GestureInput(contacts: contacts, timestamp: frame.timestamp)
@@ -201,7 +196,7 @@ public final class Driver {
             displayBounds: match.display.bounds,
             logicalMaxX: configuration.logicalMaxX ?? panel.fallbackLogicalMaxX,
             logicalMaxY: configuration.logicalMaxY ?? panel.fallbackLogicalMaxY,
-            isFlipped: configuration.isFlipped
+            rotation: Int(CGDisplayRotation(match.display.id).rounded())
         )
         mappedDisplayName = match.display.name
         return true

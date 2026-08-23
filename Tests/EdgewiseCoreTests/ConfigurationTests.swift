@@ -9,7 +9,6 @@ struct ConfigurationTests {
         var config = Configuration()
         config.gesture.longPressDelay = 0.75
         config.gesture.dragThreshold = 9
-        config.isFlipped = true
         config.displayIdentity = DisplayIdentity(vendorNumber: 5, modelNumber: 6, serialNumber: 7)
 
         let url = URL(fileURLWithPath: NSTemporaryDirectory())

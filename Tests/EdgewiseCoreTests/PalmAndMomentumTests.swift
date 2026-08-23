@@ -3,53 +3,6 @@ import Foundation
 import Testing
 @testable import EdgewiseCore
 
-@Suite("Palm rejection")
-struct PalmFilterTests {
-    func contact(id: Int = 0, size: Int, touching: Bool = true) -> TouchSample {
-        TouchSample(contactID: id, rawX: 100, rawY: 100,
-                    isTouching: touching, width: size, height: size)
-    }
-
-    @Test("a fingertip-sized contact is accepted")
-    func fingertipAccepted() {
-        #expect(PalmFilter().accepts(contact(size: 3)))
-    }
-
-    @Test("a palm-sized contact is rejected")
-    func palmRejected() {
-        #expect(!PalmFilter().accepts(contact(size: 9)))
-    }
-
-    /// Firmware that reports no size sends zeroes. Treating that as "enormous" would
-    /// reject every touch and make the driver appear completely dead.
-    @Test("a contact reporting no size at all is always accepted")
-    func unreportedSizeAccepted() {
-        #expect(PalmFilter().accepts(contact(size: 0)))
-    }
-
-    @Test("the threshold is configurable")
-    func thresholdRespected() {
-        let strict = PalmFilter(maximumContactSize: 2)
-        #expect(!strict.accepts(contact(size: 4)))
-        let lenient = PalmFilter(maximumContactSize: 10)
-        #expect(lenient.accepts(contact(size: 9)))
-    }
-
-    @Test("disabling the filter accepts everything")
-    func disabledAcceptsAll() {
-        #expect(PalmFilter(isEnabled: false).accepts(contact(size: 10)))
-    }
-
-    @Test("a resting palm alongside a real finger leaves the finger usable")
-    func palmDoesNotBlockFinger() {
-        let frame = TouchFrame(contacts: [contact(id: 0, size: 10),
-                                          contact(id: 1, size: 3)], timestamp: 0)
-        let filtered = PalmFilter().filter(frame)
-        #expect(filtered.activeCount == 1)
-        #expect(filtered.activeContacts.first?.contactID == 1)
-    }
-}
-
 @Suite("Momentum scrolling")
 struct MomentumScrollerTests {
     @Test("a flick coasts and then stops on its own")

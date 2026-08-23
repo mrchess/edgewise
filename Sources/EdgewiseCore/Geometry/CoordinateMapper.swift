@@ -14,19 +14,22 @@ public struct CoordinateMapper: Equatable, Sendable {
     public var logicalMaxY: Int
     public var logicalMinX: Int
     public var logicalMinY: Int
-    /// Set when the panel is physically mounted upside down.
-    public var isFlipped: Bool
+    /// The display's rotation, in degrees. Taken from `CGDisplayRotation`, so a panel
+    /// mounted sideways or upside down is handled by rotating the display in System
+    /// Settings — the touch mapping follows automatically rather than needing its own
+    /// switch to be kept in sync by hand.
+    public var rotation: Int
 
     public init(displayBounds: CGRect,
                 logicalMaxX: Int, logicalMaxY: Int,
                 logicalMinX: Int = 0, logicalMinY: Int = 0,
-                isFlipped: Bool = false) {
+                rotation: Int = 0) {
         self.displayBounds = displayBounds
         self.logicalMaxX = logicalMaxX
         self.logicalMaxY = logicalMaxY
         self.logicalMinX = logicalMinX
         self.logicalMinY = logicalMinY
-        self.isFlipped = isFlipped
+        self.rotation = rotation
     }
 
     public func map(rawX: Int, rawY: Int) -> CGPoint {
@@ -38,7 +41,13 @@ public struct CoordinateMapper: Equatable, Sendable {
         nx = min(max(nx, 0), 1)
         ny = min(max(ny, 0), 1)
 
-        if isFlipped { nx = 1 - nx; ny = 1 - ny }
+        // Rotate within the unit square before scaling to the display.
+        switch ((rotation % 360) + 360) % 360 {
+        case 90:  (nx, ny) = (ny, 1 - nx)
+        case 180: (nx, ny) = (1 - nx, 1 - ny)
+        case 270: (nx, ny) = (1 - ny, nx)
+        default:  break
+        }
 
         // Inset by a hair so a touch on the far edge cannot land on the neighbouring
         // display, which would make the click arrive somewhere completely unrelated.
