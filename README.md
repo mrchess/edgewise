@@ -47,7 +47,9 @@ half-size Retina mode for this panel but refuses to set it — both
 `CGDisplaySetDisplayMode` and a display configuration transaction return
 `kCGErrorIllegalArgument` — so no application can select it, this one included.
 [BetterDisplay](https://github.com/waydabber/BetterDisplay) reaches below that gate with
-a display override, which takes effect after a reboot.
+a display override, which takes effect after a reboot. The mode to aim for is 1280×360
+HiDPI — the full 2560×720 pixels with every element drawn at double size. The panel does
+enumerate it; whether the override lifts macOS's flag on it is unconfirmed here.
 
 ## Install
 
