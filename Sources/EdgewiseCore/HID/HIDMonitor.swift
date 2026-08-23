@@ -136,57 +136,65 @@ public final class HIDMonitor {
             if isDigitizer(device) { enableMultiTouch(on: device) }
         }
     }
-
     /// Switches the panel out of mouse emulation and into multi-touch reporting.
     ///
     /// This panel powers up in mouse mode: its digitizer interface is present and fully
-    /// described — ten finger collections, contact IDs, contact width — but it reports
-    /// nothing at all, while a mouse-emulation interface sends a single pointer. That
-    /// is why the panel has always looked single-touch on a Mac, and why its
-    /// multi-touch was widely assumed to be a hardware limitation.
+    /// described, but reports nothing, while a mouse-emulation interface sends a single
+    /// pointer. That is why it looks single-touch on a Mac, and why its multi-touch is
+    /// widely assumed to be a hardware limitation. Corsair specify five-point touch, so
+    /// the capability is there; it simply is never switched on.
     ///
-    /// It is not. The digitizer declares a Device Configuration feature report
-    /// (usage 0x0D/0x0E, report ID 0x21) holding Device Mode and Device Identifier.
-    /// Writing Device Mode = 2 selects multi-touch. Windows issues this during
-    /// enumeration; macOS never does, so the panel simply stays in mouse mode forever.
+    /// The digitizer declares a Device Configuration feature report (usage 0x0D/0x0E,
+    /// report ID 0x21) holding Device Mode and Device Identifier. Linux's
+    /// `hid-multitouch` writes that field during probe, which is what makes panels of
+    /// this class work there. macOS has no equivalent, so it stays in mouse mode.
     ///
-    /// Whether the report ID belongs in the buffer or only in the parameter differs
-    /// between devices, so both forms are attempted.
+    /// Following that driver: 0x02 selects touchscreen and 0x03 touchpad, and it carries
+    /// a quirk for devices that only accept the write once the report has been read.
+    /// Both values and that ordering are tried here, and the result is verified by
+    /// reading back rather than by trusting the return code — this panel returns success
+    /// for a write it then ignores.
     @discardableResult
     private func enableMultiTouch(on device: IOHIDDevice) -> Bool {
         let reportID: CFIndex = 0x21
-        let multiTouchMode: UInt8 = 0x02
-        let deviceIdentifier: UInt8 = 0x00
+        /// Matches `MT_INPUTMODE_TOUCHSCREEN` and `MT_INPUTMODE_TOUCHPAD`.
+        let modes: [UInt8] = [0x02, 0x03]
 
-        HIDTrace.log("  device mode before: \(readDeviceMode(device))")
+        // Read first: some devices refuse the write until the report has been read once.
+        HIDTrace.log("  device mode initial: \(describe(readFeature(device, reportID)))")
 
-        var withoutID: [UInt8] = [multiTouchMode, deviceIdentifier]
-        let a = IOHIDDeviceSetReport(device, kIOHIDReportTypeFeature, reportID,
-                                     &withoutID, withoutID.count)
-        HIDTrace.log("  setFeature 0x21 [02 00] -> \(a) \(a == kIOReturnSuccess ? "OK" : "FAIL")")
-        if a == kIOReturnSuccess {
-            HIDTrace.log("  device mode after:  \(readDeviceMode(device))")
-            return true
+        for mode in modes {
+            var payload: [UInt8] = [mode, 0x00]
+            let result = IOHIDDeviceSetReport(device, kIOHIDReportTypeFeature, reportID,
+                                              &payload, payload.count)
+            let readBack = readFeature(device, reportID)
+            HIDTrace.log(String(format: "  set mode 0x%02x -> ret=%d, reads back %@",
+                                mode, result, describe(readBack)))
+            if let readBack, readBack.first == mode { return true }
         }
-
-        var withID: [UInt8] = [UInt8(reportID), multiTouchMode, deviceIdentifier]
-        let b = IOHIDDeviceSetReport(device, kIOHIDReportTypeFeature, reportID,
-                                     &withID, withID.count)
-        HIDTrace.log("  setFeature 0x21 [21 02 00] -> \(b) \(b == kIOReturnSuccess ? "OK" : "FAIL")")
-        HIDTrace.log("  device mode after:  \(readDeviceMode(device))")
-        return b == kIOReturnSuccess
+        return false
     }
 
-    /// Reads back the Device Configuration feature report, so a write that returns
-    /// success but does not stick can be told from one that genuinely applied.
-    private func readDeviceMode(_ device: IOHIDDevice) -> String {
-        var buffer = [UInt8](repeating: 0, count: 8)
+    /// Reads the Device Configuration feature report.
+    ///
+    /// The buffer is sized to the two bytes the descriptor declares. An oversized one
+    /// comes back holding the control-transfer setup packet rather than report data,
+    /// which reads as plausible nonsense — that is how an earlier attempt convinced
+    /// itself it had read a device mode it never saw.
+    private func readFeature(_ device: IOHIDDevice, _ reportID: CFIndex) -> [UInt8]? {
+        var buffer = [UInt8](repeating: 0, count: 2)
         var length = buffer.count
-        let result = IOHIDDeviceGetReport(device, kIOHIDReportTypeFeature, 0x21,
+        let result = IOHIDDeviceGetReport(device, kIOHIDReportTypeFeature, reportID,
                                           &buffer, &length)
-        guard result == kIOReturnSuccess else { return "read failed (\(result))" }
-        return buffer.prefix(length).map { String(format: "%02x", $0) }.joined(separator: " ")
+        guard result == kIOReturnSuccess, length > 0 else { return nil }
+        return Array(buffer.prefix(length))
     }
+
+    private func describe(_ bytes: [UInt8]?) -> String {
+        guard let bytes else { return "unreadable" }
+        return bytes.map { String(format: "%02x", $0) }.joined(separator: " ")
+    }
+
 
     public func stop() {
         guard let manager else { return }

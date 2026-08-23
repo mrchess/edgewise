@@ -38,13 +38,24 @@ transmits on the mouse interface: across thousands of captured reports, the digi
 sent nothing.
 
 It declares the standard Device Configuration feature report (usage 0x0D/0x0E, report
-ID 0x21) whose Device Mode field is how Windows switches such a device into multi-touch.
-Writing 2 to it returns success and changes nothing — reading the report back shows the
-mode unchanged, and the digitizer stays silent.
+ID 0x21) whose Device Mode field is what Linux's `hid-multitouch` writes to bring panels
+of this class up — the same mechanism Windows uses. Edgewise follows that driver: reads
+the report first (some devices only accept the write afterwards), then tries both
+`MT_INPUTMODE_TOUCHSCREEN` (0x02) and `MT_INPUTMODE_TOUCHPAD` (0x03), verifying by
+read-back rather than trusting the return code.
 
-The remaining candidate is the panel's vendor-defined interface (usage page 0xFF0A, a
-64-byte command pipe), which is almost certainly how iCUE drives it on Windows.
-Identifying the command would mean capturing that traffic on a Windows machine.
+Every write returns success. None takes effect, and the digitizer stays silent. The
+read-back is more telling still: it returns `a1 01` — the USB control-transfer *setup
+packet* (`bmRequestType=0xA1, bRequest=0x01`, GET_REPORT) rather than any report data.
+Feature reports do not appear to reach the device through `IOHIDDevice` here at all,
+whatever status the calls report.
+
+Two candidates remain, neither reachable from this end. The panel's vendor-defined
+interface (usage page 0xFF0A, a 64-byte command pipe) is almost certainly how iCUE
+drives it on Windows; identifying that command means capturing the traffic there.
+Failing that, feature reports may need `IOUSBHost` rather than the HID manager.
+Corsair specify five-point touch, so the capability is real — it is only ever switched
+on by software that knows the trick.
 
 Until then Edgewise falls back to the mouse interface, which is what makes tap, drag,
 double-tap and press-and-hold work. The gesture recogniser handles multiple contacts
