@@ -122,6 +122,26 @@ edgewise-diag doctor
 | `record <file> [seconds]` | Capture a gesture to a test fixture |
 | `replay <file>` | Replay a fixture and print the gestures it produced |
 
+## Scope: touch input only
+
+Edgewise does not control the panel's brightness, colour, or the widget surface.
+That is display *output*; this is input, and keeping the two apart keeps both
+understandable.
+
+It matters mechanically, not just philosophically. Seizing a HID interface locks
+every other process out of it, and the Xeneon Edge presents three interfaces on one
+VID/PID. Edgewise claims only the digitizer and the mouse-emulation interface, and
+deliberately leaves the vendor-defined command pipe (`0xFF0A`, 64-byte reports 0x50
+in / 0x51 out — almost certainly what iCUE drives on Windows) untouched. Any future
+display-control tool can therefore talk to the panel while touch is running.
+
+For colour today, macOS already has what most people need: assign or build an ICC
+profile in System Settings → Displays → Colour, including the built-in Display
+Calibrator. That is pure software correction and needs no third-party app at all.
+Hardware brightness is not exposed on this panel through DDC or `IODisplay`, so
+changing it would mean reverse-engineering that vendor pipe — a separate project,
+with a real risk of writing something the firmware does not expect.
+
 ## Known limits
 
 - **Window dragging requires cursor-warp mode.** The WindowServer watches the HID event

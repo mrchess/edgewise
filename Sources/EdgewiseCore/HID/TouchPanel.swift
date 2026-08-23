@@ -39,3 +39,28 @@ public struct TouchPanel: Equatable, Sendable {
 
     public static let known: [TouchPanel] = [.xeneonEdge, .cineEdge]
 }
+
+/// Which of a panel's HID interfaces the driver claims.
+///
+/// The Xeneon Edge presents three interfaces on one VID/PID, and the distinction
+/// matters because seizing a device locks everything else out of it:
+///
+/// - **Digitizer** (`0x0D`/`0x04`) — the real multi-touch reports. This is the one we
+///   actually want.
+/// - **Mouse emulation** (`0x01`/`0x02`) — must also be claimed, because this is the
+///   interface macOS reads to produce the relative trackpad behaviour we are replacing.
+///   Leaving it free means the cursor keeps drifting alongside our absolute clicks.
+/// - **Vendor-defined** (`0xFF0A`) — a 64-byte bidirectional command pipe (report 0x50
+///   in, 0x51 out). This is almost certainly the channel iCUE uses for brightness and
+///   panel settings on Windows. Edgewise deliberately does **not** claim it, so that
+///   any future display-control tool can talk to the panel while touch is running.
+public struct HIDInterface: Sendable {
+    public let usagePage: Int
+    public let usage: Int
+
+    public static let digitizer = HIDInterface(usagePage: 0x0D, usage: 0x04)
+    public static let mouse = HIDInterface(usagePage: 0x01, usage: 0x02)
+
+    /// The interfaces the driver claims. Notably excludes the vendor pipe.
+    public static let claimed: [HIDInterface] = [.digitizer, .mouse]
+}

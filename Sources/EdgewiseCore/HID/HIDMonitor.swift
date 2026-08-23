@@ -52,8 +52,18 @@ public final class HIDMonitor {
         let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
         self.manager = manager
 
-        let matches = panels.map {
-            [kIOHIDVendorIDKey: $0.vendorID, kIOHIDProductIDKey: $0.productID] as CFDictionary
+        // Match interface by interface rather than by VID/PID alone. Matching the
+        // whole device would also seize the vendor command pipe, needlessly locking
+        // out anything that wants to control the panel's brightness or settings.
+        let matches = panels.flatMap { panel in
+            HIDInterface.claimed.map { interface in
+                [
+                    kIOHIDVendorIDKey: panel.vendorID,
+                    kIOHIDProductIDKey: panel.productID,
+                    kIOHIDDeviceUsagePageKey: interface.usagePage,
+                    kIOHIDDeviceUsageKey: interface.usage,
+                ] as CFDictionary
+            }
         }
         IOHIDManagerSetDeviceMatchingMultiple(manager, matches as CFArray)
 
