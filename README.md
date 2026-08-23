@@ -41,36 +41,37 @@ An independent MIT implementation that draws on prior MIT-licensed work:
 - [bencolson/Touchdown](https://github.com/bencolson/Touchdown) — showed the same
   controller drives panels beyond the Xeneon.
 
-## Scope: touch input only
+## Configuration
 
-Edgewise does not control the panel's brightness, colour, or the widget surface.
-That is display *output*; this is input, and keeping the two apart keeps both
-understandable.
+Everything is in the app's settings. The underlying file lives at
+`~/Library/Application Support/Edgewise/config.json` if you prefer to edit it directly.
 
-It matters mechanically, not just philosophically. Seizing a HID interface locks
-every other process out of it, and the Xeneon Edge presents three interfaces on one
-VID/PID. Edgewise claims only the digitizer and the mouse-emulation interface, and
-deliberately leaves the vendor-defined command pipe (`0xFF0A`, 64-byte reports 0x50
-in / 0x51 out — almost certainly what iCUE drives on Windows) untouched. Any future
-display-control tool can therefore talk to the panel while touch is running.
+| Setting | Default | Notes |
+| --- | --- | --- |
+| Delivery mode | `warp` | `background` leaves the cursor alone; window dragging still needs `warp` |
+| Long press | 0.5s | Set to taste, or turn right-click off |
+| Drag threshold | 4pt | How far a finger moves before a tap becomes a drag |
+| Two-finger scroll | on | Natural direction by default |
+| Pinch to zoom | on | `magnify` gesture, or `commandScroll` for maximum compatibility |
+| Display | auto | Pin the panel explicitly if detection picks wrong |
 
-For colour today, macOS already has what most people need: assign or build an ICC
-profile in System Settings → Displays → Colour, including the built-in Display
-Calibrator. That is pure software correction and needs no third-party app at all.
-Hardware brightness is not exposed on this panel through DDC or `IODisplay`, so
-changing it would mean reverse-engineering that vendor pipe — a separate project,
-with a real risk of writing something the firmware does not expect.
+## Diagnostics
 
-## Known limits
+`edgewise-diag` ships inside the app bundle at
+`/Applications/Edgewise.app/Contents/MacOS/edgewise-diag`. It never posts an event, so
+it is always safe to run.
 
-- **Window dragging requires cursor-warp mode.** The WindowServer watches the HID event
-  stream to run window-move gestures; a per-process event cannot express one. Background
-  mode falls back automatically for drags.
-- **Some Chromium renderers** coerce a posted right-click into a left-click in web
-  content. Use warp mode there.
-- **Pinch uses undocumented CoreGraphics gesture fields** to synthesise a real
-  trackpad magnify event. If a future macOS changes them, switch the setting to
-  Command-scroll, which is built on public API only.
+```bash
+edgewise-diag doctor
+```
+
+| Command | Purpose |
+| --- | --- |
+| `doctor` | Check permissions, panel, and display mapping |
+| `devices` | List panels and the HID usages they report |
+| `displays` | Show every display and which one resolves as the panel |
+| `record <file> [seconds]` | Capture a gesture to a test fixture |
+| `replay <file>` | Replay a fixture and print the gestures it produced |
 
 ## Building
 
