@@ -7,49 +7,48 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [0.1.0] - 2026-08-23
 
-First release. A fresh MIT implementation unifying the best of three prior projects —
-see [README](README.md#what-was-taken-from-where) for what came from where.
+First release. A macOS touch driver for the Corsair Xeneon Edge: taps land where you
+touch, on the right display.
 
 ### Added
 
-- Tap to click at the touched point, press-and-hold to right-click, drag,
-  two-finger scroll, and pinch to zoom.
-- Multi-finger gestures are implemented and tested but inert on the Xeneon Edge, which
-  only transmits on its mouse-emulation interface. See README.
-- Momentum scrolling: a flick coasts and decelerates rather than stopping dead.
-  Scroll events carry proper phase and momentum tags, so apps rubber-band correctly.
-- Two-finger tap to right-click, the trackpad convention.
-- Palm rejection for panels that report contact size. Off by default — the Xeneon Edge
-  does not report it, so it has no effect there.
-- Double-tap registers as a double-click.
-- Pinch is delivered either as a real trackpad magnify gesture or as command-scroll,
-  selectable in settings.
-- Menu bar app with first-run onboarding, live permission state, and a display picker.
-  Start-at-login via `SMAppService` — no LaunchAgent plist, no install script.
-- `edgewise-diag` with `doctor`, `devices`, `displays`, `record`, and `replay`.
-- Record-and-replay test harness: real HID streams captured to JSON fixtures and
-  replayed through the production pipeline, so hardware behaviour stays under test on
-  machines with no panel attached.
-- Device table covering the Corsair Xeneon Edge and the Dig.Tech CineEdge, which share
-  a WCH touch controller.
-- Universal binary, DMG packaging, and a release pipeline with optional signing and
-  notarization.
+- Tap to click at the touched point, double-tap for a real double-click, press-and-hold
+  for a right-click with an adjustable threshold, and drag.
+- The cursor travels to your finger and returns to where it was, in about one frame.
+  Optional — leave it where you tapped instead.
+- Rotation is read from `CGDisplayRotation`, so rotating the display in System Settings
+  carries the touch mapping with it at all four angles.
+- Runs invisibly: no Dock icon, no menu bar item. Open it again from Applications to
+  reach its settings. Start-at-login registers a LaunchAgent from inside the bundle, so
+  launchd relaunches it after a crash.
+- `edgewise-diag` for permissions, device and display diagnostics, and for recording
+  gestures to fixtures that replay through the production pipeline in tests.
+- Universal binary, signed and notarised, installed by dragging from a DMG.
+
+### Known limitations
+
+- **Multi-finger gestures do not work.** Two-finger scroll, two-finger tap and pinch are
+  implemented and tested, but the panel never reports a second contact on macOS, so they
+  are hidden rather than offered. Not a limitation of this driver, and not of the
+  hardware — see the README.
+- Brightness, colour and resolution are out of scope. The panel answers DDC/CI, so
+  MonitorControl covers picture settings; larger text needs BetterDisplay, because macOS
+  refuses to set the half-size Retina mode it advertises for this panel.
 
 ### Fixed
 
 Relative to the prior implementations this project draws on:
 
-- **Drag now works.** The panel emits its touch flag only on transitions, never during
-  a held touch, so handlers keyed on the button never saw movement. The parser retains
-  contact state across coordinate updates.
-- **The correct display is chosen on three-display setups.** Earlier implementations
-  picked "the first display that is not the main one", which resolves to the built-in
-  screen on a MacBook driving an external main monitor. Resolution is now by saved
-  identity, then EDID name, then exact size — and refuses to guess.
-- **A dropped release report can no longer leave the mouse button held down**; a stuck
-  contact times out.
-- **Cursor warps are followed by an explicit `mouseMoved`**, so apps that watch the
-  mouse event stream see the cursor arrive before the click.
+- **Drag works.** The panel emits its touch flag only on transitions, never during a
+  held touch, so handlers keyed on the button never saw movement.
+- **The correct display is chosen on multi-display setups.** Earlier drivers picked "the
+  first display that is not the main one", which resolves to the built-in screen on a
+  MacBook driving an external monitor. Resolution is now by saved identity, then EDID
+  name, then exact size — and refuses to guess.
+- **A dropped release report can no longer leave the mouse button held down**, and
+  quitting releases the panel rather than relying on the kernel to tear it down.
+- **Cursor warps are followed by an explicit `mouseMoved`**, so apps watching the mouse
+  event stream see the cursor arrive before the click.
 
 [Unreleased]: https://github.com/mrchess/edgewise/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/mrchess/edgewise/releases/tag/v0.1.0

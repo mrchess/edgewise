@@ -79,12 +79,19 @@ jobs:
         id: notes
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          # Matched with index() rather than a built regex: the version contains dots,
+          # and escaping it into a pattern is how the previous attempt ended up with a
+          # syntax error that only surfaced at tag time.
           awk -v v="$VERSION" '
-            $0 ~ "^## \\[?"v : { found=1; next }
+            index($0, "## [" v "]") == 1 || index($0, "## " v) == 1 { found = 1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > /tmp/notes.md
-          [ -s /tmp/notes.md ] || echo "See CHANGELOG.md" > /tmp/notes.md
+          if [ ! -s /tmp/notes.md ]; then
+            echo "No CHANGELOG entry for $VERSION — see CHANGELOG.md." > /tmp/notes.md
+          fi
+          echo "--- release notes ---"
+          cat /tmp/notes.md
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
