@@ -30,36 +30,43 @@ and you can revoke it there. To uninstall, drag the app to the Trash.
 
 macOS 13 or later. Universal binary — Apple Silicon and Intel.
 
-## Multi-finger gestures do not work on the Xeneon Edge yet
+## Multi-finger gestures cannot work on macOS
 
-The panel ships a complete ten-finger digitizer interface in its HID descriptor, and
-also a mouse-emulation interface describing a single pointer. In practice it only ever
-transmits on the mouse interface: across thousands of captured reports, the digitizer
-sent nothing.
+Not "not yet" — as far as anyone has been able to establish, not at all, from any
+macOS software.
 
-It declares the standard Device Configuration feature report (usage 0x0D/0x0E, report
-ID 0x21) whose Device Mode field is what Linux's `hid-multitouch` writes to bring panels
-of this class up — the same mechanism Windows uses. Edgewise follows that driver: reads
-the report first (some devices only accept the write afterwards), then tries both
-`MT_INPUTMODE_TOUCHSCREEN` (0x02) and `MT_INPUTMODE_TOUCHPAD` (0x03), verifying by
-read-back rather than trusting the return code.
+The panel presents three interfaces: a ten-finger digitizer, a vendor channel
+(`0xFF0A`), and a mouse-emulation interface. On macOS it transmits only on the mouse
+interface; the digitizer never sends a single report. On Windows, the host writes
+`SET_REPORT Feature 0x21 = [21 02 00]` and multitouch begins streaming about 3ms later.
 
-Every write returns success. None takes effect, and the digitizer stays silent. The
-read-back is more telling still: it returns `a1 01` — the USB control-transfer *setup
-packet* (`bmRequestType=0xA1, bRequest=0x01`, GET_REPORT) rather than any report data.
-Feature reports do not appear to reach the device through `IOHIDDevice` here at all,
-whatever status the calls report.
+[Myseri/xeneon-edge-multitouch-macos](https://github.com/Myseri/xeneon-edge-multitouch-macos)
+has done the definitive work here, including a USBPcap capture of the Windows unlock and
+a DriverKit driver that replays it byte-for-byte. Their
+[diagnostic log](https://github.com/Myseri/xeneon-edge-multitouch-macos/blob/main/docs/DIAGNOSTIC_LOG.md)
+records what has been eliminated on real hardware:
 
-Two candidates remain, neither reachable from this end. The panel's vendor-defined
-interface (usage page 0xFF0A, a 64-byte command pipe) is almost certainly how iCUE
-drives it on Windows; identifying that command means capturing the traffic there.
-Failing that, feature reports may need `IOUSBHost` rather than the HID manager.
-Corsair specify five-point touch, so the capability is real — it is only ever switched
-on by software that knows the trick.
+- Byte-exact replay of the Windows enumeration sequence — every response byte identical
+  to Windows', including `GET_REPORT 0x0A` returning `0a 0f`. No effect.
+- `SET_REPORT` both with and without the report ID byte, at both the HID and raw USB
+  layers. Accepted every time; no effect.
+- UPDD, the commercial touch driver, claiming the whole composite device exclusively.
+  Still single-touch.
 
-Until then Edgewise falls back to the mouse interface, which is what makes tap, drag,
-double-tap and press-and-hold work. The gesture recogniser handles multiple contacts
-and is unit-tested for them, so the day the digitizer reports, they work.
+Three independent stacks — their dext, Apple's own, and UPDD — fail identically. Their
+surviving hypothesis is that the firmware fingerprints the host OS during **bus
+enumeration**, before any driver loads, and honours the mode switch only when that
+fingerprint says Windows. Nothing done afterwards can change what the host stack already
+did.
+
+They also observed the same tell Edgewise did: a `GET_REPORT` read-back returns the USB
+SETUP packet echoed as data rather than report contents, so it cannot be used to verify
+anything.
+
+Edgewise still attempts the mode switch at startup — it costs nothing and would begin
+working the day a firmware or OS change allows it — and the gesture recogniser handles
+multiple contacts and is unit-tested for them. Until then, touch arrives on the mouse
+interface, which is what makes tap, drag, double-tap and press-and-hold work.
 
 ## Credits
 
