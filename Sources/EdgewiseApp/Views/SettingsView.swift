@@ -53,6 +53,32 @@ struct SettingsView: View {
                     set: { driver.configuration.isFlipped = $0; driver.restart() }))
             }
 
+            Section("Resolution") {
+                if driver.availableModes.isEmpty {
+                    Text("Connect the panel to change its resolution.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Picker("Panel resolution", selection: Binding(
+                        get: { driver.currentMode?.id ?? -1 },
+                        set: { id in
+                            if let mode = driver.availableModes.first(where: { $0.id == id }) {
+                                driver.apply(mode: mode)
+                            }
+                        })) {
+                        ForEach(driver.availableModes) { mode in
+                            Text(mode.label).tag(mode.id)
+                        }
+                    }
+                    Text("""
+                    The native resolution renders text very small. The Retina option is \
+                    the same pixels at half the logical size — crisp, but shows less. \
+                    macOS hides it from System Settings; it works anyway.
+                    """)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Behaviour") {
                 Picker("When you touch", selection: Binding(
                     get: { driver.configuration.deliveryMode },

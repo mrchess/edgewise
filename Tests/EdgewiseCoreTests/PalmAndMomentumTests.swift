@@ -180,3 +180,66 @@ struct TwoFingerTapTests {
         #expect(vy > 100, "a fast flick should report real velocity, got \(vy)")
     }
 }
+
+@Suite("Display mode catalogue")
+struct DisplayModeCatalogTests {
+    func mode(_ id: Int32, _ w: Int, _ h: Int, px: Int? = nil, py: Int? = nil,
+              usable: Bool = true) -> DisplayMode {
+        DisplayMode(id: id, width: w, height: h,
+                    pixelWidth: px ?? w, pixelHeight: py ?? h,
+                    refreshRate: 60, isUsableForDesktopGUI: usable)
+    }
+
+    let native = 2560.0 / 720.0   // 32:9
+
+    /// The panel advertises a pile of 4:3 and 16:9 modes it can only letterbox or
+    /// stretch. Offering them would be worse than offering nothing.
+    @Test("modes of the wrong shape are dropped")
+    func wrongAspectDropped() {
+        let modes = [mode(1, 2560, 720), mode(2, 1920, 1080),
+                     mode(3, 1024, 768), mode(4, 800, 600)]
+        let kept = DisplayModeCatalog.curate(modes, nativeAspect: native, current: nil)
+        #expect(kept.map(\.id) == [1])
+    }
+
+    @Test("the hidden Retina mode is kept")
+    func retinaModeKept() {
+        let retina = mode(2, 1280, 360, px: 2560, py: 720, usable: false)
+        let kept = DisplayModeCatalog.curate([mode(1, 2560, 720), retina],
+                                             nativeAspect: native, current: nil)
+        #expect(kept.count == 2)
+        #expect(kept.contains(retina))
+        #expect(retina.isHiDPI)
+    }
+
+    /// Whatever is set now must always be selectable, or the picker cannot show the
+    /// truth and the user cannot get back.
+    @Test("the current mode survives filtering even if oddly shaped")
+    func currentModeAlwaysOffered() {
+        let odd = mode(9, 1024, 768)
+        let kept = DisplayModeCatalog.curate([mode(1, 2560, 720)],
+                                             nativeAspect: native, current: odd)
+        #expect(kept.contains(odd))
+    }
+
+    @Test("largest is listed first")
+    func sortedLargestFirst() {
+        let kept = DisplayModeCatalog.curate(
+            [mode(2, 1280, 360, px: 2560, py: 720), mode(1, 2560, 720)],
+            nativeAspect: native, current: nil)
+        #expect(kept.first?.width == 2560)
+    }
+
+    @Test("a degenerate mode cannot divide by zero")
+    func zeroHeightIgnored() {
+        let kept = DisplayModeCatalog.curate([mode(1, 100, 0)],
+                                             nativeAspect: native, current: nil)
+        #expect(kept.isEmpty)
+    }
+
+    @Test("labels say when a mode is Retina")
+    func labelling() {
+        #expect(mode(1, 2560, 720).label == "2560 × 720")
+        #expect(mode(2, 1280, 360, px: 2560, py: 720).label.contains("Retina"))
+    }
+}

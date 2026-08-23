@@ -80,6 +80,32 @@ An independent MIT implementation that draws on prior MIT-licensed work:
   — protocol-oriented structure, tests, and display matching by serial.
 - [bencolson/Touchdown](https://github.com/bencolson/Touchdown) — showed the same
   controller drives panels beyond the Xeneon.
+- [Myseri/xeneon-edge-multitouch-macos](https://github.com/Myseri/xeneon-edge-multitouch-macos)
+  — captured the Windows multi-touch unlock over USB and established, with a DriverKit
+  driver that replays it byte-for-byte, that macOS cannot reproduce it. Their
+  [diagnostic log](https://github.com/Myseri/xeneon-edge-multitouch-macos/blob/main/docs/DIAGNOSTIC_LOG.md)
+  is the reference on why this panel is single-touch on a Mac, and saved this project
+  from chasing it further.
+- [aabdelghani/corsair-xeneon-edge-linux](https://github.com/aabdelghani/corsair-xeneon-edge-linux)
+  — showed the panel's picture controls are reachable over DDC/CI, not only through
+  Corsair's own protocol.
+
+## Panel resolution
+
+The native 2560×720 renders text very small. macOS advertises a Retina mode for the
+panel — 1280×360 logical, backed by the full 2560×720 — but marks it unusable for the
+desktop GUI, so it never appears in System Settings. It works perfectly well; Edgewise
+just sets it.
+
+Settings → Resolution lists only modes matching the panel's own shape, because it also
+advertises a pile of 4:3 and 16:9 sizes it can only letterbox or stretch. Switching
+re-resolves the touch mapping straight away, so taps keep landing correctly.
+
+A true scaled mode such as 1920×540 is not advertised by the panel at all and cannot be
+selected by any application; that needs an EDID override or a tool like BetterDisplay.
+Brightness and colour are not Edgewise's business either — the panel does answer
+DDC/CI, so [MonitorControl](https://github.com/MonitorControl/MonitorControl) is the
+right tool.
 
 ## Configuration
 
