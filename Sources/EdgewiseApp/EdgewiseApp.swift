@@ -45,6 +45,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Releases the panel before the process goes away.
+    ///
+    /// Without this, quitting relies on the kernel tearing down the process to release
+    /// the HID seize, and the driver's own cleanup never runs — so quitting during a
+    /// drag leaves the left mouse button held down system-wide, with nothing left
+    /// running to release it. `Driver.stop` ends any gesture in flight, unseizes the
+    /// interfaces so macOS resumes its own handling, and drops the display callback.
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { AppServices.shared.driver.stop() }
+    }
+
     /// Opening the app while it is already running. With no Dock icon, and possibly no
     /// menu bar item, this is the only route back to settings — so it must work even
     /// when no window currently exists.
