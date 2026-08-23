@@ -185,7 +185,18 @@ func replay(_ path: String) {
         let fixture = try HIDFixture.load(from: URL(fileURLWithPath: path))
         print("Fixture: \(fixture.name)  (\(fixture.values.count) values, "
               + "range \(fixture.logicalMaxX)x\(fixture.logicalMaxY))\n")
-        let events = FixturePlayer().play(fixture)
+        let player = FixturePlayer()
+        let summary = player.summarize(fixture)
+        print("What the hardware reported:")
+        print("  frames:              \(summary.frames)")
+        print("  max simultaneous:    \(summary.maximumSimultaneousContacts) contact(s)")
+        print("  contact IDs seen:    \(summary.contactIDsSeen.sorted())")
+        if summary.maximumSimultaneousContacts < 2 {
+            print("  → only one contact ever reported; multi-finger gestures cannot work")
+        }
+        print("\nGestures recognised:")
+
+        let events = player.play(fixture)
         if events.isEmpty {
             print("  (no gestures produced)")
         }

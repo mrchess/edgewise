@@ -32,6 +32,9 @@ public final class HIDMonitor {
 
     private var manager: IOHIDManager?
     private var parser = HIDReportParser()
+    /// Cache of which devices are the digitizer, keyed by device pointer. Looking the
+    /// properties up per value would mean two IOKit calls on every coordinate.
+    private var isDigitizerCache: [UnsafeMutableRawPointer: Bool] = [:]
     private let panels: [TouchPanel]
     private let clock: @Sendable () -> TimeInterval
 
@@ -78,6 +81,7 @@ public final class HIDMonitor {
             guard let context else { return }
             let monitor = Unmanaged<HIDMonitor>.fromOpaque(context).takeUnretainedValue()
             monitor.parser.reset()
+            monitor.isDigitizerCache.removeAll()
             monitor.onDisconnect?()
         }, context)
 
@@ -99,8 +103,32 @@ public final class HIDMonitor {
         self.manager = nil
     }
 
+    /// True for the panel's multi-touch digitizer interface, false for its
+    /// mouse-emulation one.
+    ///
+    /// The panel exposes both. We seize both — the mouse interface has to be claimed
+    /// or macOS keeps using it to drive the cursor — but only the digitizer's reports
+    /// are worth reading. The mouse interface describes a single pointer and sends no
+    /// Contact ID, so its reports land in contact slot 0 and overwrite whatever the
+    /// digitizer put there. Two fingers then collapse into one, which is why every
+    /// multi-finger gesture behaved like a single drag.
+    private func isDigitizer(_ device: IOHIDDevice) -> Bool {
+        let key = Unmanaged.passUnretained(device).toOpaque()
+        if let cached = isDigitizerCache[key] { return cached }
+
+        let page = (IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsagePageKey as CFString)
+                    as? Int) ?? 0
+        let usage = (IOHIDDeviceGetProperty(device, kIOHIDPrimaryUsageKey as CFString)
+                     as? Int) ?? 0
+        let result = page == HIDInterface.digitizer.usagePage
+                  && usage == HIDInterface.digitizer.usage
+        isDigitizerCache[key] = result
+        return result
+    }
+
     private func handle(_ value: IOHIDValue) {
         let element = IOHIDValueGetElement(value)
+        guard isDigitizer(IOHIDElementGetDevice(element)) else { return }
         let page = Int(IOHIDElementGetUsagePage(element))
         let usage = Int(IOHIDElementGetUsage(element))
         let intValue = IOHIDValueGetIntegerValue(value)

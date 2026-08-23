@@ -69,6 +69,29 @@ public struct FixturePlayer {
         self.tickInterval = tickInterval
     }
 
+    /// What the hardware actually reported, independent of gesture interpretation.
+    /// Answers "did two fingers ever reach us" without any recogniser in the way.
+    public struct Summary: Equatable, Sendable {
+        public var maximumSimultaneousContacts = 0
+        public var contactIDsSeen: Set<Int> = []
+        public var frames = 0
+    }
+
+    public func summarize(_ fixture: HIDFixture) -> Summary {
+        var parser = HIDReportParser()
+        var summary = Summary()
+        for value in fixture.values {
+            guard let frame = parser.ingest(usagePage: value.usagePage, usage: value.usage,
+                                            value: value.value, timestamp: value.offset)
+            else { continue }
+            summary.frames += 1
+            summary.maximumSimultaneousContacts = max(summary.maximumSimultaneousContacts,
+                                                      frame.activeCount)
+            for contact in frame.activeContacts { summary.contactIDsSeen.insert(contact.contactID) }
+        }
+        return summary
+    }
+
     public func play(_ fixture: HIDFixture) -> [GestureEvent] {
         var parser = HIDReportParser()
         var recognizer = GestureRecognizer(configuration: gestureConfiguration)
