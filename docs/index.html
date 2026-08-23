@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Edgewise is a macOS touch driver for the Corsair Xeneon Edge. Taps land where you touch, with drag, momentum scrolling, pinch to zoom and palm rejection.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="Edgewise">
+<meta property="og:description" content="A macOS touch driver for the Corsair Xeneon Edge. Taps land where you touch.">
+<meta property="og:type" content="website">
+<title>Edgewise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  /* Light palette is the base; dark redefines only tokens. */
+  :root {
+    --ground:      #F5F7FA;
+    --raised:      #FFFFFF;
+    --sunken:      #ECEFF4;
+    --slab:        #10131B;   /* the panel itself — dark in both themes */
+    --slab-edge:   #2A3040;
+    --ink:         #0F131C;
+    --ink-soft:    #4B5567;
+    --ink-faint:   #7B8698;
+    --rule:        #DBE1EA;
+    --accent:      #0A6CBC;
+    --accent-soft: #E3F0FB;
+    --glow:        #5CBEFF;   /* the touch point — constant in both themes */
+    --shadow:      0 1px 2px rgba(15, 19, 28, .06), 0 8px 24px rgba(15, 19, 28, .05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0A0C12;
+      --raised:      #12151E;
+      --sunken:      #0E111A;
+      --slab:        #0C0E15;
+      --slab-edge:   #2E3648;
+      --ink:         #DFE5F1;
+      --ink-soft:    #9AA6BA;
+      --ink-faint:   #6B7789;
+      --rule:        #1E2331;
+      --accent:      #5CBEFF;
+      --accent-soft: #12222F;
+      --glow:        #5CBEFF;
+      --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0A0C12;
+    --raised:      #12151E;
+    --sunken:      #0E111A;
+    --slab:        #0C0E15;
+    --slab-edge:   #2E3648;
+    --ink:         #DFE5F1;
+    --ink-soft:    #9AA6BA;
+    --ink-faint:   #6B7789;
+    --rule:        #1E2331;
+    --accent:      #5CBEFF;
+    --accent-soft: #12222F;
+    --glow:        #5CBEFF;
+    --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px rgba(0, 0, 0, .35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.65;
+    margin: 0;
+    padding: 0 24px 96px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Prose sits in a reading column; panel mocks break wider to echo 32:9. */
+  .col   { max-width: 660px; margin-inline: auto; }
+  .wide  { max-width: 1000px; margin-inline: auto; }
+
+  h1, h2, h3 { font-family: Archivo, system-ui, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(2.6rem, 7vw, 4rem); font-weight: 700; letter-spacing: -.035em; line-height: 1.02; }
+  h2 { font-size: 1.55rem; font-weight: 600; letter-spacing: -.02em; }
+  h3 { font-size: 1rem;    font-weight: 600; letter-spacing: -.01em; }
+  p  { margin: 0; }
+  a  { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .7rem; font-weight: 500; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+
+  section { padding-block: 60px; }
+  .stack     { display: flex; flex-direction: column; gap: 20px; }
+  .stack-sm  { display: flex; flex-direction: column; gap: 10px; }
+  .stack-lg  { display: flex; flex-direction: column; gap: 34px; }
+
+  /* A 32:9 hairline — the panel's own proportion, used as the section divider. */
+  .divider { max-width: 1000px; margin: 0 auto; height: 1px; background: var(--rule); }
+
+  /* ── Hero ─────────────────────────────────────────────── */
+  header { padding-block: 76px 40px; }
+  .lede { font-size: 1.2rem; color: var(--ink-soft); text-wrap: pretty; }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    font-family: "IBM Plex Mono", monospace; font-size: .72rem;
+    padding: 4px 9px; border: 1px solid var(--rule); border-radius: 4px;
+    color: var(--ink-soft); background: var(--raised);
+  }
+
+  /* ── The panel mock ───────────────────────────────────── */
+  .panel {
+    aspect-ratio: 32 / 9;
+    background: linear-gradient(170deg, #171B26, var(--slab));
+    border: 1px solid var(--slab-edge);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .panel-caption {
+    font-family: "IBM Plex Mono", monospace; font-size: .72rem;
+    color: var(--ink-faint); text-align: center; margin-top: 10px;
+  }
+
+  .ripple-dot {
+    position: absolute; width: 3.2%; aspect-ratio: 1; border-radius: 50%;
+    background: var(--glow); box-shadow: 0 0 22px 5px rgba(92, 190, 255, .55);
+    transform: translate(-50%, -50%);
+  }
+  .ring {
+    position: absolute; border-radius: 50%;
+    border: 1.5px solid var(--glow);
+    transform: translate(-50%, -50%);
+    animation: pulse 3.4s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { width: 4%;  aspect-ratio: 1; opacity: .8; }
+    70%  { width: 26%; aspect-ratio: 1; opacity: 0; }
+    100% { width: 26%; aspect-ratio: 1; opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ring { animation: none; width: 14%; aspect-ratio: 1; opacity: .35; }
+  }
+
+  /* ── Before / after ───────────────────────────────────── */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .compare { grid-template-columns: 1fr; } }
+  .compare h3 { margin-bottom: 8px; }
+  .compare .note { font-size: .88rem; color: var(--ink-soft); margin-top: 8px; }
+  .tag {
+    font-family: "IBM Plex Mono", monospace; font-size: .68rem;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .tag-bad  { color: #C2554B; }
+  .tag-good { color: var(--accent); }
+
+  /* ── Gestures ─────────────────────────────────────────── */
+  .gestures { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1px;
+              background: var(--rule); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .gesture { background: var(--raised); padding: 18px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .gesture .what { font-size: .9rem; color: var(--ink-soft); }
+  .gesture svg { display: block; }
+
+  /* ── Findings ─────────────────────────────────────────── */
+  .finding { border-left: 2px solid var(--accent); padding-left: 20px; }
+  .finding p { color: var(--ink-soft); font-size: .95rem; margin-top: 6px; }
+  code {
+    font-family: "IBM Plex Mono", monospace; font-size: .86em;
+    background: var(--sunken); padding: 1.5px 5px; border-radius: 3px; color: var(--ink);
+  }
+  pre {
+    font-family: "IBM Plex Mono", monospace; font-size: .8rem; line-height: 1.6;
+    background: var(--slab); color: #C6D2E4; border: 1px solid var(--slab-edge);
+    border-radius: 8px; padding: 16px 18px; overflow-x: auto; margin: 0;
+  }
+  pre .c { color: #6E7C93; }
+  pre .k { color: var(--glow); }
+
+  /* ── Install ──────────────────────────────────────────── */
+  .steps { display: flex; flex-direction: column; gap: 0; counter-reset: step; }
+  .step {
+    display: grid; grid-template-columns: 28px 1fr; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--rule);
+  }
+  .step:last-child { border-bottom: 0; }
+  .step-n {
+    font-family: "IBM Plex Mono", monospace; font-size: .78rem;
+    color: var(--ink-faint); padding-top: 2px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: 9px 12px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-family: "IBM Plex Mono", monospace; font-size: .7rem; letter-spacing: .1em;
+       text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+  td.mono { font-family: "IBM Plex Mono", monospace; font-size: .84rem; white-space: nowrap; }
+  .table-wrap { overflow-x: auto; }
+
+  ul.credits { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  ul.credits li { font-size: .93rem; color: var(--ink-soft); }
+  ul.credits strong { color: var(--ink); font-weight: 600; }
+
+  footer { color: var(--ink-faint); font-size: .85rem; padding-top: 40px; }
+</style>
+</head>
+<body>
+<header class="col stack">
+  <div class="eyebrow">macOS touch driver</div>
+  <h1>Taps land where&nbsp;you touch.</h1>
+  <p class="lede">
+    The Corsair Xeneon Edge is a 14.5-inch, 2560&times;720 touchscreen. On macOS it behaves
+    like a trackpad, because macOS has no idea what it is. Edgewise fixes that.
+  </p>
+  <div class="badges">
+    <span class="badge">Swift 6</span>
+    <span class="badge">macOS 13+</span>
+    <span class="badge">Universal</span>
+    <span class="badge">MIT</span>
+    <span class="badge">68 tests</span>
+  </div>
+</header>
+
+<div class="wide">
+  <div class="panel">
+    <div class="ring"   style="left: 72%; top: 50%;"></div>
+    <div class="ripple-dot" style="left: 72%; top: 50%;"></div>
+  </div>
+  <p class="panel-caption">2560 &times; 720 &mdash; 32:9</p>
+</div>
+
+<section class="col stack-lg">
+  <div class="stack-sm">
+    <div class="eyebrow">The problem</div>
+    <h2>macOS treats it as a mouse, not a screen</h2>
+  </div>
+  <p style="color: var(--ink-soft);">
+    When macOS meets a HID digitizer it doesn't recognise, it falls back to reading it as a
+    <em>relative</em> pointing device. Your finger nudges the cursor from wherever it already
+    sat, instead of moving it to where you touched. Corsair's iCUE solves this on Windows and
+    has never existed for the Mac.
+  </p>
+
+  <div class="compare">
+    <div>
+      <h3><span class="tag tag-bad">Before</span></h3>
+      <div class="panel" style="aspect-ratio: 32/12;">
+        <svg viewBox="0 0 320 120" width="100%" height="100%" aria-label="Cursor drifts away from the touch point">
+          <circle cx="230" cy="46" r="5" fill="#5CBEFF"/>
+          <path d="M90 84 C 130 84, 150 74, 176 66" stroke="#C2554B" stroke-width="2"
+                fill="none" stroke-dasharray="4 4"/>
+          <path d="M176 66 l 0 15 l 5 -4 l 4 8 l 4 -2 l -4 -8 l 6 -1 z"
+                fill="#C2554B"/>
+          <circle cx="90" cy="84" r="3" fill="#6E7C93"/>
+        </svg>
+      </div>
+      <p class="note">The cursor creeps from where it was. You aim, then re-aim.</p>
+    </div>
+    <div>
+      <h3><span class="tag tag-good">After</span></h3>
+      <div class="panel" style="aspect-ratio: 32/12;">
+        <svg viewBox="0 0 320 120" width="100%" height="100%" aria-label="Cursor lands exactly on the touch point">
+          <circle cx="230" cy="46" r="16" fill="none" stroke="#5CBEFF" stroke-width="1.2" opacity=".35"/>
+          <circle cx="230" cy="46" r="9"  fill="none" stroke="#5CBEFF" stroke-width="1.4" opacity=".6"/>
+          <circle cx="230" cy="46" r="5" fill="#5CBEFF"/>
+          <path d="M230 46 l 0 15 l 5 -4 l 4 8 l 4 -2 l -4 -8 l 6 -1 z" fill="#DFE5F1"/>
+        </svg>
+      </div>
+      <p class="note">The click lands under your finger. Every time.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="col stack-lg">
+  <div class="stack-sm">
+    <div class="eyebrow">What it does</div>
+    <h2>The gestures you'd expect</h2>
+  </div>
+
+  <div class="gestures">
+    <div class="gesture">
+      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+        <circle cx="14" cy="15" r="5" fill="var(--glow)"/>
+        <circle cx="14" cy="15" r="10" fill="none" stroke="var(--glow)" stroke-width="1.2" opacity=".4"/>
+      </svg>
+      <h3>Tap</h3>
+      <p class="what">Clicks exactly where you touched.</p>
+    </div>
+    <div class="gesture">
+      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+        <circle cx="12" cy="15" r="4.5" fill="var(--glow)"/>
+        <circle cx="28" cy="15" r="4.5" fill="var(--glow)" opacity=".55"/>
+      </svg>
+      <h3>Double-tap</h3>
+      <p class="what">A real double-click — opens folders, selects words.</p>
+    </div>
+    <div class="gesture">
+      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+        <circle cx="14" cy="15" r="5" fill="var(--glow)"/>
+        <path d="M24 10 a 6 6 0 1 1 0 10" fill="none" stroke="var(--glow)" stroke-width="1.4" opacity=".6"/>
+      </svg>
+      <h3>Press and hold</h3>
+      <p class="what">Right-click. Or two-finger tap, if you prefer.</p>
+    </div>
+    <div class="gesture">
+      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+        <circle cx="11" cy="15" r="4.5" fill="var(--glow)"/>
+        <path d="M20 15 h 16" stroke="var(--glow)" stroke-width="1.6" opacity=".55"/>
+        <path d="M36 15 l -5 -3.5 v 7 z" fill="var(--glow)" opacity=".55"/>
+      </svg>
+      <h3>Drag</h3>
+      <p class="what">Press, move, release — windows and selections.</p>
+    </div>
+    <div class="gesture">
+      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+        <circle cx="12" cy="10" r="4" fill="var(--glow)"/>
+        <circle cx="12" cy="21" r="4" fill="var(--glow)"/>
+        <path d="M22 15 h 14" stroke="var(--glow)" stroke-width="1.4" opacity=".5" stroke-dasharray="3 3"/>
+        <path d="M36 15 l -5 -3.5 v 7 z" fill="var(--glow)" opacity=".5"/>
+      </svg>
+      <h3>Two-finger scroll</h3>
+      <p class="what">Flick it and it coasts, with real momentum.</p>
+    </div>
+    <div class="gesture">
+      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+        <circle cx="10" cy="15" r="4" fill="var(--glow)"/>
+        <circle cx="34" cy="15" r="4" fill="var(--glow)"/>
+        <path d="M17 15 h 5 M27 15 h 5" stroke="var(--glow)" stroke-width="1.4" opacity=".5"/>
+      </svg>
+      <h3>Pinch</h3>
+      <p class="what">Zoom, as a true trackpad magnify gesture.</p>
+    </div>
+  </div>
+
+  <div class="stack-sm">
+    <h3>And a mode where your cursor never moves</h3>
+    <p style="color: var(--ink-soft); font-size: .95rem;">
+      Normally a tap yanks the cursor down to the panel and puts it back. In
+      <strong>background mode</strong>, the tap is posted straight to the app under your finger
+      and the cursor never leaves your main display &mdash; so you can hit a control on the Edge
+      mid-sentence without losing your place.
+    </p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="col stack-lg">
+  <div class="stack-sm">
+    <div class="eyebrow">Under the hood</div>
+    <h2>Four things worth knowing</h2>
+  </div>
+
+  <div class="finding">
+    <h3>Why drag was broken everywhere</h3>
+    <p>
+      The panel reports its touch flag <em>only on transitions</em> &mdash; never while a finger
+      is held down. Every prior driver acted on that flag, so it saw the finger land and lift but
+      never move. Edgewise retains contact state across coordinate updates, which is the whole
+      reason dragging works.
+    </p>
+  </div>
+
+  <div class="finding">
+    <h3>A display resolver that refuses to guess</h3>
+    <p>
+      Earlier drivers picked &ldquo;the first display that isn't the main one.&rdquo; On a MacBook
+      driving an external monitor that resolves to the <em>built-in</em> screen, and every touch
+      lands on the laptop. Edgewise matches on saved identity, then EDID name, then exact panel
+      size &mdash; and if none match it does nothing and says so.
+    </p>
+  </div>
+
+  <div class="finding">
+    <h3>It's a 15-point multi-touch digitizer</h3>
+    <p>
+      Received wisdom held that the panel's multi-touch was a hardware limitation. Reading the HID
+      descriptor says otherwise &mdash; which is what makes scroll and pinch possible at all.
+    </p>
+    <pre><span class="c">page 0x0d usage 0x51</span>  <span class="k">Contact ID</span>             [0...15]
+<span class="c">page 0x0d usage 0x55</span>  <span class="k">Contact Count Max</span>      [0...15]
+<span class="c">page 0x0d usage 0x52</span>  <span class="k">Contact Width</span>          [0...10]
+<span class="c">page 0x01 usage 0x30</span>  <span class="k">X</span>                      [0...16383]</pre>
+  </div>
+
+  <div class="finding">
+    <h3>Contact size gives you palm rejection</h3>
+    <p>
+      That <code>Contact Width</code> field is why a resting wrist doesn't register. A 32:9 strip
+      sits low and flat on the desk &mdash; exactly where the side of your hand lands while typing.
+      Contacts too large to be a fingertip are dropped.
+    </p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="col stack-lg">
+  <div class="stack-sm">
+    <div class="eyebrow">Testing</div>
+    <h2>Record once, replay forever</h2>
+  </div>
+  <p style="color: var(--ink-soft);">
+    Touch hardware can't be present on a CI runner, so the driver records one. The core is
+    pure &mdash; parsing, mapping, display resolution and gesture recognition do no I/O and take
+    &ldquo;now&rdquo; from the caller &mdash; and real gestures are captured as HID fixtures and
+    replayed through the production pipeline with a virtual clock.
+  </p>
+  <pre><span class="c"># capture a real gesture from the panel</span>
+edgewise-diag record fixtures/slow-drag.json 8
+
+<span class="c"># replay it through the real parser and recogniser</span>
+edgewise-diag replay fixtures/slow-drag.json
+  <span class="k">drag began</span>  (1204, 1622)
+  <span class="k">drag moved</span>  (1361, 1622)
+  <span class="k">drag ended</span>  (2287, 1623)</pre>
+  <p style="color: var(--ink-soft); font-size: .95rem;">
+    Every timing rule &mdash; long-press, momentum decay, the stuck-contact timeout &mdash; is
+    tested without a single sleep.
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<section class="col stack-lg">
+  <div class="stack-sm">
+    <div class="eyebrow">Install</div>
+    <h2>No Terminal, no scripts</h2>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="step-n">01</div><div>Download <code>Edgewise.dmg</code> from Releases.</div></div>
+    <div class="step"><div class="step-n">02</div><div>Drag Edgewise to Applications.</div></div>
+    <div class="step"><div class="step-n">03</div><div>Open it. It walks you through the two permissions macOS requires.</div></div>
+  </div>
+  <p style="color: var(--ink-soft); font-size: .95rem;">
+    Start-at-login uses <code>SMAppService</code>, so it appears in System Settings &rarr; Login
+    Items and you can revoke it there. To uninstall, drag the app to the Trash.
+  </p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Setting</th><th>Default</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">deliveryMode</td><td class="mono">warp</td><td>Or <code>background</code> to leave the cursor alone</td></tr>
+        <tr><td class="mono">longPressDelay</td><td class="mono">0.5s</td><td>Or turn right-click off entirely</td></tr>
+        <tr><td class="mono">momentum</td><td class="mono">on</td><td>Flick and it coasts</td></tr>
+        <tr><td class="mono">palmRejection</td><td class="mono">on</td><td>Ignores contacts larger than a fingertip</td></tr>
+        <tr><td class="mono">display</td><td class="mono">auto</td><td>Pin the panel if detection picks wrong</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section class="col stack-lg">
+  <div class="stack-sm">
+    <div class="eyebrow">Credits</div>
+    <h2>Standing on other people's debugging</h2>
+  </div>
+  <p style="color: var(--ink-soft); font-size: .95rem;">
+    An independent MIT implementation that draws on prior MIT-licensed work. The hard-won part
+    of a driver like this isn't the code &mdash; it's the device behaviour nobody documented.
+  </p>
+  <ul class="credits">
+    <li><strong>ymlaine/TouchscreenDriver</strong> &mdash; the original seize-and-map approach, and the panel's USB identity.</li>
+    <li><strong>alax's PR #2</strong> &mdash; found that the panel reports its touch flag only on transitions, which is why drag never worked.</li>
+    <li><strong>ajvwhite/MacXeneonEdgeTouchDriver</strong> &mdash; protocol-oriented structure, tests, and display matching by serial.</li>
+    <li><strong>bencolson/Touchdown</strong> &mdash; showed the same controller drives panels beyond the Xeneon.</li>
+  </ul>
+</section>
+
+<footer class="col">
+  MIT licensed. Not affiliated with Corsair. &ldquo;Xeneon&rdquo; is a Corsair trademark, used here
+  only to say what the driver is for.
+</footer>
+</body>
+</html>
