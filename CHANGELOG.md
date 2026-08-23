@@ -51,5 +51,5 @@ Relative to the prior implementations this project draws on:
 - **Cursor warps are followed by an explicit `mouseMoved`**, so apps that watch the
   mouse event stream see the cursor arrive before the click.
 
-[Unreleased]: https://github.com/OWNER/edgewise/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/OWNER/edgewise/releases/tag/v0.1.0
+[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mrchess/edgewise/releases/tag/v0.1.0
