@@ -76,15 +76,16 @@ struct SettingsView: View {
                     set: { driver.configuration.gesture.longPressRightClick = $0 }))
 
                 if driver.configuration.gesture.longPressRightClick {
-                    LabeledContent("Hold for") {
-                        HStack {
-                            Slider(value: Binding(
-                                get: { driver.configuration.gesture.longPressDelay },
-                                set: { driver.configuration.gesture.longPressDelay = $0 }),
-                                   in: 0.2...1.5)
-                            Text("\(driver.configuration.gesture.longPressDelay, specifier: "%.1f")s")
+                    // A stepper rather than a slider: this is a threshold people tune
+                    // to a specific feel and then leave alone, and a drag cannot land
+                    // on a repeatable value.
+                    Stepper(value: Binding(
+                        get: { driver.configuration.gesture.longPressDelay },
+                        set: { driver.configuration.gesture.longPressDelay = $0 }),
+                        in: 0.05...2.0, step: 0.01) {
+                        LabeledContent("Hold for") {
+                            Text("\(driver.configuration.gesture.longPressDelay, specifier: "%.2f")s")
                                 .monospacedDigit()
-                                .frame(width: 40, alignment: .trailing)
                         }
                     }
                 }
