@@ -51,6 +51,21 @@ struct SettingsView: View {
             }
 
             Section("Behaviour") {
+                Toggle("Return the cursor after each tap", isOn: Binding(
+                    get: { driver.configuration.restoreCursor },
+                    set: { driver.configuration.restoreCursor = $0; driver.restart() }))
+                Text(driver.configuration.restoreCursor
+                     ? """
+                       The cursor moves to your finger, clicks, and goes back to where it \
+                       was — a visible trip of about one frame.
+                       """
+                     : """
+                       The cursor stays where you tapped. No trip to see, but it leaves \
+                       your main display.
+                       """)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
                 Toggle("Press and hold to right-click", isOn: Binding(
                     get: { driver.configuration.gesture.longPressRightClick },
                     set: { driver.configuration.gesture.longPressRightClick = $0 }))

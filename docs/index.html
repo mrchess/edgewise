@@ -299,7 +299,7 @@
 <section class="col stack-lg">
   <div class="stack-sm">
     <div class="eyebrow">What it does</div>
-    <h2>The gestures you'd expect</h2>
+    <h2>The gestures this panel can do</h2>
   </div>
 
   <div class="gestures">
@@ -335,25 +335,6 @@
       </svg>
       <h3>Drag</h3>
       <p class="what">Press, move, release — windows and selections.</p>
-    </div>
-    <div class="gesture blocked">
-      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
-        <circle cx="12" cy="10" r="4" fill="var(--glow)"/>
-        <circle cx="12" cy="21" r="4" fill="var(--glow)"/>
-        <path d="M22 15 h 14" stroke="var(--glow)" stroke-width="1.4" opacity=".5" stroke-dasharray="3 3"/>
-        <path d="M36 15 l -5 -3.5 v 7 z" fill="var(--glow)" opacity=".5"/>
-      </svg>
-      <h3>Two-finger scroll<span class="status status-off">not yet</span></h3>
-      <p class="what">Implemented and tested; the panel does not report two contacts.</p>
-    </div>
-    <div class="gesture blocked">
-      <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
-        <circle cx="10" cy="15" r="4" fill="var(--glow)"/>
-        <circle cx="34" cy="15" r="4" fill="var(--glow)"/>
-        <path d="M17 15 h 5 M27 15 h 5" stroke="var(--glow)" stroke-width="1.4" opacity=".5"/>
-      </svg>
-      <h3>Pinch<span class="status status-off">not yet</span></h3>
-      <p class="what">Implemented and tested; blocked by the same limit.</p>
     </div>
   </div>
 
@@ -434,6 +415,8 @@ hid digitizer=<span class="k">false</span>  count=1101
       firmware fingerprints the host OS during bus enumeration, before any driver loads,
       and honours the mode switch only when it believes it is talking to Windows.
     </p>
+  </div>
+
   <div class="callout">
     <h3>What this means in practice</h3>
     <p>
