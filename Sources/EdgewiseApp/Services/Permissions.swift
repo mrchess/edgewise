@@ -1,4 +1,5 @@
 import ApplicationServices
+import EdgewiseCore
 import Foundation
 import IOKit.hid
 
@@ -43,9 +44,28 @@ final class Permissions: ObservableObject {
         openSettings(.accessibility)
     }
 
+    /// Asks for Input Monitoring, and makes sure macOS actually lists the app.
+    ///
+    /// `IOHIDRequestAccess` on its own is not enough. macOS attributes Input Monitoring
+    /// to a process when that process *attempts* to open a matching HID device — so an
+    /// app that politely asks first and only opens the device once permission arrives
+    /// deadlocks: it never appears in the list, and there is nothing for the user to
+    /// switch on. Attempting the open is what registers us. It is expected to fail
+    /// here; failing is the point.
     func requestInputMonitoring() {
         _ = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
+        provokeRegistration()
         openSettings(.inputMonitoring)
+    }
+
+    private func provokeRegistration() {
+        let manager = IOHIDManagerCreate(kCFAllocatorDefault, IOOptionBits(kIOHIDOptionsTypeNone))
+        let matches = TouchPanel.known.map {
+            [kIOHIDVendorIDKey: $0.vendorID, kIOHIDProductIDKey: $0.productID] as CFDictionary
+        }
+        IOHIDManagerSetDeviceMatchingMultiple(manager, matches as CFArray)
+        _ = IOHIDManagerOpen(manager, IOOptionBits(kIOHIDOptionsTypeNone))
+        IOHIDManagerClose(manager, IOOptionBits(kIOHIDOptionsTypeNone))
     }
 
     enum Pane: String {
