@@ -55,7 +55,6 @@ public final class Driver {
 
     static func makeSink(for configuration: Configuration) -> EventSink {
         CGEventSink(restoreCursor: configuration.restoreCursor,
-                    hideCursorDuringClick: configuration.hideCursorDuringClick,
                     pinchDelivery: configuration.pinchDelivery)
     }
 

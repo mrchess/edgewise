@@ -18,9 +18,9 @@ import Foundation
 public final class CGEventSink: EventSink {
     public struct Timings: Equatable, Sendable {
         // The cursor is visibly at the touch point for the sum of these, so they are
-        // kept as short as the system will reliably register. Cursor hiding cannot
-        // cover the gap: CGDisplayHideCursor only applies while the calling app is
-        // frontmost, and this one is a background agent that never is.
+        // kept as short as the system will reliably register. The trip cannot be
+        // hidden instead: CGDisplayHideCursor only applies while the calling app is
+        // frontmost, and a background agent never is, so it silently does nothing.
         public var warpToClick: TimeInterval = 0.004
         public var downToUp: TimeInterval = 0.012
         public var clickToRestore: TimeInterval = 0.004
@@ -30,7 +30,6 @@ public final class CGEventSink: EventSink {
     public var timings: Timings
     /// Put the cursor back where it was after a click, so the panel does not steal it.
     public var restoreCursor: Bool
-    public var hideCursorDuringClick: Bool
     public var pinchDelivery: PinchDelivery
 
     private var isDragging = false
@@ -55,11 +54,9 @@ public final class CGEventSink: EventSink {
 
     public init(timings: Timings = Timings(),
                 restoreCursor: Bool = true,
-                hideCursorDuringClick: Bool = true,
                 pinchDelivery: PinchDelivery = .magnify) {
         self.timings = timings
         self.restoreCursor = restoreCursor
-        self.hideCursorDuringClick = hideCursorDuringClick
         self.pinchDelivery = pinchDelivery
     }
 
@@ -88,9 +85,6 @@ public final class CGEventSink: EventSink {
     private func tapClick(at point: CGPoint, button: CGMouseButton) {
         advanceClickState(at: point)
         let origin = currentCursor()
-        if hideCursorDuringClick { CGDisplayHideCursor(CGMainDisplayID()) }
-        defer { if hideCursorDuringClick { CGDisplayShowCursor(CGMainDisplayID()) } }
-
         warp(to: point)
         Thread.sleep(forTimeInterval: timings.warpToClick)
 
