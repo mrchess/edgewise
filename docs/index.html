@@ -239,9 +239,8 @@
     <span class="badge">68 tests</span>
   </div>
   <p style="color: var(--ink-soft); font-size: .93rem;">
-    Tap, drag, double-tap and press-and-hold work today. Multi-finger gestures are
-    built and tested but <a href="#multitouch">the panel will not report two
-    contacts</a> yet.
+    Tap, drag, double-tap and press-and-hold work today. Multi-finger gestures are built
+    and tested, but <a href="#multitouch">the panel will not report two contacts</a>.
   </p>
 </header>
 
@@ -326,7 +325,7 @@
         <path d="M24 10 a 6 6 0 1 1 0 10" fill="none" stroke="var(--glow)" stroke-width="1.4" opacity=".6"/>
       </svg>
       <h3>Press and hold</h3>
-      <p class="what">Right-click, without a modifier key.</p>
+      <p class="what">Right-click. Hold time is adjustable.</p>
     </div>
     <div class="gesture">
       <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
@@ -359,12 +358,13 @@
   </div>
 
   <div class="stack-sm">
-    <h3>And a mode where your cursor never moves</h3>
+    <h3>Your cursor ends up where it started</h3>
     <p style="color: var(--ink-soft); font-size: .95rem;">
-      Normally a tap yanks the cursor down to the panel and puts it back. In
-      <strong>background mode</strong>, the tap is posted straight to the app under your finger
-      and the cursor never leaves your main display &mdash; so you can hit a control on the Edge
-      mid-sentence without losing your place.
+      A tap moves the cursor to your finger, clicks, and returns it &mdash; about 20ms, one
+      frame &mdash; so you can hit a control on the panel without losing your place on the main
+      display. An earlier version posted events straight to the app underneath to skip the
+      trip entirely. It needed a private API, Chromium apps discarded the events anyway, and
+      the end state was identical. It was removed.
     </p>
   </div>
 </section>
@@ -394,6 +394,16 @@
       driving an external monitor that resolves to the <em>built-in</em> screen, and every touch
       lands on the laptop. Edgewise matches on saved identity, then EDID name, then exact panel
       size &mdash; and if none match it does nothing and says so.
+    </p>
+  </div>
+
+  <div class="finding">
+    <h3>Rotation, not a switch</h3>
+    <p>
+      The panel is built to be mounted inside a case, so it may sit sideways or upside
+      down. Rather than a "panel is upside down" toggle for somebody to keep in sync by
+      hand, Edgewise reads <code>CGDisplayRotation</code>: rotate the display in System
+      Settings and the touch mapping follows, at all four angles.
     </p>
   </div>
 
@@ -476,19 +486,21 @@ edgewise-diag replay fixtures/slow-drag.json
     <div class="step"><div class="step-n">03</div><div>Open it. It walks you through the two permissions macOS requires.</div></div>
   </div>
   <p style="color: var(--ink-soft); font-size: .95rem;">
-    Start-at-login uses <code>SMAppService</code>, so it appears in System Settings &rarr; Login
-    Items and you can revoke it there. To uninstall, drag the app to the Trash.
+    Edgewise then runs invisibly &mdash; no Dock icon, no menu bar item, no window unless you
+    ask for one. Open it again from Applications to reach its settings. Start-at-login
+    registers a LaunchAgent from inside the bundle, so launchd relaunches it if it ever
+    crashes, and it appears in System Settings &rarr; Login Items where you can revoke it.
+    To uninstall, drag the app to the Trash.
   </p>
 
   <div class="table-wrap">
     <table>
       <thead><tr><th>Setting</th><th>Default</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td class="mono">deliveryMode</td><td class="mono">warp</td><td>Or <code>background</code> to leave the cursor alone</td></tr>
         <tr><td class="mono">longPressDelay</td><td class="mono">0.5s</td><td>Or turn right-click off entirely</td></tr>
-        <tr><td class="mono">momentum</td><td class="mono">on</td><td>Flick and it coasts</td></tr>
-        <tr><td class="mono">palmRejection</td><td class="mono">on</td><td>Ignores contacts larger than a fingertip</td></tr>
-        <tr><td class="mono">display</td><td class="mono">auto</td><td>Pin the panel if detection picks wrong</td></tr>
+        <tr><td class="mono">dragThreshold</td><td class="mono">4pt</td><td>How far a finger moves before a tap becomes a drag</td></tr>
+        <tr><td class="mono">restoreCursor</td><td class="mono">on</td><td>Return the cursor after each tap</td></tr>
+        <tr><td class="mono">startAtLogin</td><td class="mono">on</td><td>LaunchAgent, relaunched on crash</td></tr>
       </tbody>
     </table>
   </div>
