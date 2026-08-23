@@ -40,16 +40,31 @@ and unit-tested, but the panel never reports a second contact on macOS, so they 
 hidden rather than offered. Not a limitation of the driver, and not — despite the common
 claim — of the hardware. See [below](#multi-finger-gestures-cannot-work-on-macos).
 
-**Brightness, colour and resolution.** Edgewise handles touch input only. The panel
-answers DDC/CI, so [MonitorControl](https://github.com/MonitorControl/MonitorControl)
-covers picture settings. Text size Edgewise cannot help with at all: macOS lists a
-half-size Retina mode for this panel but refuses to set it — both
+**Brightness and colour.** Edgewise handles touch input only. The panel answers DDC/CI,
+so [MonitorControl](https://github.com/MonitorControl/MonitorControl) covers picture
+settings.
+
+**Text size, which nothing fixes.** At 2560×720 across 13.4 inches the panel is about
+191 PPI, so everything renders at roughly half the size you would expect. macOS
+enumerates the obvious remedy — 1280×360 HiDPI, the full 2560×720 pixels with every
+element drawn at double size — and then refuses to set it: both
 `CGDisplaySetDisplayMode` and a display configuration transaction return
-`kCGErrorIllegalArgument` — so no application can select it, this one included.
-[BetterDisplay](https://github.com/waydabber/BetterDisplay) reaches below that gate with
-a display override, which takes effect after a reboot. The mode to aim for is 1280×360
-HiDPI — the full 2560×720 pixels with every element drawn at double size. The panel does
-enumerate it; whether the override lifts macOS's flag on it is unconfirmed here.
+`kCGErrorIllegalArgument`, because the mode carries a flag marking it unusable for the
+desktop GUI.
+
+A `scale-resolutions` display override, of the kind
+[BetterDisplay](https://github.com/waydabber/BetterDisplay) writes to
+`/Library/Displays/Contents/Resources/Overrides/`, does **not** lift that flag. Tested
+on this hardware: the override installed and targeting the right panel, after a reboot,
+the mode is enumerated three times over and every copy still reports
+`isUsableForDesktopGUI() == false`.
+
+BetterDisplay can still change what you see, by substituting a virtual display for the
+real one. Be careful with that here: doing so replaced the panel's entire mode list,
+dropped its native 2560×720, and left it running 1920×1080 — a 16:9 framebuffer on a
+32:9 panel. Touch mapping is derived from the display's bounds, so it goes wrong the
+moment the framebuffer stops matching the glass. If you try it, tap something afterwards
+and check it still lands where you touched.
 
 ## Install
 
