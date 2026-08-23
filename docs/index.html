@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Edgewise is a macOS touch driver for the Corsair Xeneon Edge. Taps land where you touch, with drag, momentum scrolling, pinch to zoom and palm rejection.">
+<meta name="description" content="Edgewise is a macOS touch driver for the Corsair Xeneon Edge. Taps land where you touch.">
 <meta name="color-scheme" content="light dark">
 <meta property="og:title" content="Edgewise">
 <meta property="og:description" content="A macOS touch driver for the Corsair Xeneon Edge. Taps land where you touch.">
@@ -14,6 +14,18 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 
 <style>
+  .status { display: inline-block; font-family: "IBM Plex Mono", monospace;
+            font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+            padding: 2px 7px; border-radius: 3px; vertical-align: middle;
+            margin-left: 8px; white-space: nowrap; }
+  .status-on  { background: var(--accent-soft); color: var(--accent); }
+  .status-off { background: var(--sunken); color: var(--ink-faint); }
+  .gesture.blocked h3, .gesture.blocked .what { opacity: .55; }
+  .callout { border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+             border-radius: 6px; padding: 18px 20px; background: var(--raised); }
+  .callout h3 { margin-bottom: 8px; }
+  .callout p { color: var(--ink-soft); font-size: .93rem; }
+
   /* Light palette is the base; dark redefines only tokens. */
   :root {
     --ground:      #F5F7FA;
@@ -227,6 +239,11 @@
     <span class="badge">MIT</span>
     <span class="badge">68 tests</span>
   </div>
+  <p style="color: var(--ink-soft); font-size: .93rem;">
+    Tap, drag, double-tap and press-and-hold work today. Multi-finger gestures are
+    built and tested but <a href="#multitouch">the panel will not report two
+    contacts</a> yet.
+  </p>
 </header>
 
 <div class="wide">
@@ -310,7 +327,7 @@
         <path d="M24 10 a 6 6 0 1 1 0 10" fill="none" stroke="var(--glow)" stroke-width="1.4" opacity=".6"/>
       </svg>
       <h3>Press and hold</h3>
-      <p class="what">Right-click. Or two-finger tap, if you prefer.</p>
+      <p class="what">Right-click, without a modifier key.</p>
     </div>
     <div class="gesture">
       <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
@@ -321,24 +338,24 @@
       <h3>Drag</h3>
       <p class="what">Press, move, release — windows and selections.</p>
     </div>
-    <div class="gesture">
+    <div class="gesture blocked">
       <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
         <circle cx="12" cy="10" r="4" fill="var(--glow)"/>
         <circle cx="12" cy="21" r="4" fill="var(--glow)"/>
         <path d="M22 15 h 14" stroke="var(--glow)" stroke-width="1.4" opacity=".5" stroke-dasharray="3 3"/>
         <path d="M36 15 l -5 -3.5 v 7 z" fill="var(--glow)" opacity=".5"/>
       </svg>
-      <h3>Two-finger scroll</h3>
-      <p class="what">Flick it and it coasts, with real momentum.</p>
+      <h3>Two-finger scroll<span class="status status-off">not yet</span></h3>
+      <p class="what">Implemented and tested; the panel does not report two contacts.</p>
     </div>
-    <div class="gesture">
+    <div class="gesture blocked">
       <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
         <circle cx="10" cy="15" r="4" fill="var(--glow)"/>
         <circle cx="34" cy="15" r="4" fill="var(--glow)"/>
         <path d="M17 15 h 5 M27 15 h 5" stroke="var(--glow)" stroke-width="1.4" opacity=".5"/>
       </svg>
-      <h3>Pinch</h3>
-      <p class="what">Zoom, as a true trackpad magnify gesture.</p>
+      <h3>Pinch<span class="status status-off">not yet</span></h3>
+      <p class="what">Implemented and tested; blocked by the same limit.</p>
     </div>
   </div>
 
@@ -381,24 +398,43 @@
     </p>
   </div>
 
-  <div class="finding">
-    <h3>It's a 15-point multi-touch digitizer</h3>
+  <div class="finding" id="multitouch">
+    <h3>The panel will not report two fingers</h3>
     <p>
-      Received wisdom held that the panel's multi-touch was a hardware limitation. Reading the HID
-      descriptor says otherwise &mdash; which is what makes scroll and pinch possible at all.
+      Its descriptor declares a full ten-finger digitizer. In practice it transmits only
+      on a second, mouse-emulation interface describing a single pointer &mdash; across
+      thousands of captured reports, the digitizer sent nothing at all. That is why
+      multi-finger gestures do not work here, and probably why the panel's multi-touch is
+      widely assumed to be a hardware limitation.
     </p>
-    <pre><span class="c">page 0x0d usage 0x51</span>  <span class="k">Contact ID</span>             [0...15]
-<span class="c">page 0x0d usage 0x55</span>  <span class="k">Contact Count Max</span>      [0...15]
-<span class="c">page 0x0d usage 0x52</span>  <span class="k">Contact Width</span>          [0...10]
-<span class="c">page 0x01 usage 0x30</span>  <span class="k">X</span>                      [0...16383]</pre>
+    <pre><span class="c">// 1,100+ reports captured during taps and two-finger swipes</span>
+hid digitizer=<span class="k">false</span>  count=1
+hid digitizer=<span class="k">false</span>  count=1101
+<span class="c">// the digitizer interface never spoke</span></pre>
+    <p>
+      It declares the standard Device Configuration feature report that Windows uses to
+      switch such a device into multi-touch. Writing to it returns success and changes
+      nothing &mdash; read the report back and the mode is unchanged.
+    </p>
+    <pre>setFeature 0x21 [02 00] -> 0 <span class="k">OK</span>
+device mode before:  21 <span class="k">03</span> 00
+device mode after:   21 <span class="k">03</span> 00   <span class="c">// ignored</span></pre>
+    <p>
+      The remaining candidate is the panel's vendor-defined interface &mdash; a 64-byte
+      command pipe on usage page <code>0xFF0A</code>, almost certainly how iCUE drives it
+      on Windows. Identifying that command means capturing the traffic on a Windows
+      machine. Edgewise deliberately leaves that interface unclaimed, so such a tool can
+      talk to the panel while touch is running.
+    </p>
   </div>
 
-  <div class="finding">
-    <h3>Contact size gives you palm rejection</h3>
+  <div class="callout">
+    <h3>What this means in practice</h3>
     <p>
-      That <code>Contact Width</code> field is why a resting wrist doesn't register. A 32:9 strip
-      sits low and flat on the desk &mdash; exactly where the side of your hand lands while typing.
-      Contacts too large to be a fingertip are dropped.
+      Tap, drag, double-tap and press-and-hold work today, on the correct display. The
+      gesture recogniser already handles multiple contacts and is unit-tested for them,
+      so the day that vendor command is found, two-finger scroll and pinch work without
+      a rewrite.
     </p>
   </div>
 </section>
