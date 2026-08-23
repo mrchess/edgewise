@@ -53,34 +53,6 @@ struct SettingsView: View {
                     set: { driver.configuration.isFlipped = $0; driver.restart() }))
             }
 
-            Section("Resolution") {
-                if driver.availableModes.count > 1 {
-                    Picker("Panel resolution", selection: Binding(
-                        get: { driver.currentMode?.id ?? -1 },
-                        set: { id in
-                            if let mode = driver.availableModes.first(where: { $0.id == id }) {
-                                driver.apply(mode: mode)
-                            }
-                        })) {
-                        ForEach(driver.availableModes) { mode in
-                            Text(mode.label).tag(mode.id)
-                        }
-                    }
-                } else if let current = driver.currentMode {
-                    LabeledContent("Panel resolution", value: current.label)
-                    Text("""
-                    This panel offers no other resolution at its own shape. macOS lists \
-                    a half-size Retina mode for it but refuses to set it, so no app can \
-                    select it — that needs an EDID override or a tool like BetterDisplay.
-                    """)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                } else {
-                    Text("Connect the panel to see its resolution.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
             Section("Behaviour") {
                 Picker("When you touch", selection: Binding(
                     get: { driver.configuration.deliveryMode },

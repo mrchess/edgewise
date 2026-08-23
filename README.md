@@ -90,23 +90,22 @@ An independent MIT implementation that draws on prior MIT-licensed work:
   — showed the panel's picture controls are reachable over DDC/CI, not only through
   Corsair's own protocol.
 
-## Panel resolution
+## Not in scope
 
-Settings → Resolution lists the panel's resolutions, restricted to its own 32:9 shape —
-it also advertises 4:3 and 16:9 sizes it can only letterbox or stretch. Switching
-re-resolves the touch mapping straight away, so taps keep landing correctly.
+Edgewise handles touch input and nothing else. Two things people reasonably expect it
+to do, and where to get them instead:
 
-**On the Xeneon Edge there is nothing to choose.** The native 2560×720 renders text
-very small, and macOS does list a half-size Retina mode for the panel (1280×360 logical,
-backed by the full 2560×720) — but flags it unusable for the desktop GUI and then
-*refuses to set it*. Both `CGDisplaySetDisplayMode` and a display configuration
-transaction return `kCGErrorIllegalArgument`. The flag is a hard gate, not a hint about
-where the mode appears in System Settings, so no application can select it.
+**Larger text.** The native 2560×720 renders text very small. macOS lists a half-size
+Retina mode for the panel but flags it unusable for the desktop GUI and then refuses to
+set it — both `CGDisplaySetDisplayMode` and a display configuration transaction return
+`kCGErrorIllegalArgument`, so no application can select it. Changing this needs an EDID
+override or [BetterDisplay](https://github.com/waydabber/BetterDisplay), which work below
+that gate.
 
-Larger text on this panel therefore needs an EDID override or a tool like
-[BetterDisplay](https://github.com/waydabber/BetterDisplay), which work below that gate.
-Brightness and colour are out of scope too; the panel answers DDC/CI, so
-[MonitorControl](https://github.com/MonitorControl/MonitorControl) is the right tool.
+**Brightness and colour.** The panel answers DDC/CI, so
+[MonitorControl](https://github.com/MonitorControl/MonitorControl) handles it. Edgewise
+also deliberately leaves the panel's vendor command channel unclaimed, so a tool that
+speaks it can run alongside.
 
 ## Configuration
 

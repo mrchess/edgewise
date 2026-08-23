@@ -1,5 +1,4 @@
 import Combine
-import CoreGraphics
 import EdgewiseCore
 import Foundation
 
@@ -76,40 +75,6 @@ final class DriverController: ObservableObject {
     }
 
     var availableDisplays: [DisplayDescriptor] { DisplayProvider.current() }
-
-    // MARK: - Panel resolution
-
-    /// The panel's display, resolved the same way the driver resolves it.
-    private var panelDisplayID: CGDirectDisplayID? {
-        let criteria = DisplayResolver.Criteria(identity: configuration.displayIdentity)
-        return DisplayResolver(criteria: criteria)
-            .resolve(among: DisplayProvider.current())?.display.id
-    }
-
-    /// Resolutions worth offering for the panel, native shape only.
-    var availableModes: [DisplayMode] {
-        guard let panelDisplayID else { return [] }
-        let modes = DisplayModeController.modes(for: panelDisplayID)
-        let current = DisplayModeController.current(for: panelDisplayID)
-        // Derive the panel's shape from its largest mode rather than assuming 32:9,
-        // so this stays correct for other panels on the same controller.
-        let native = modes.max { $0.pixelWidth < $1.pixelWidth }?.aspectRatio
-            ?? current?.aspectRatio ?? (2560.0 / 720.0)
-        return DisplayModeCatalog.curate(modes, nativeAspect: native, current: current)
-    }
-
-    var currentMode: DisplayMode? {
-        panelDisplayID.flatMap(DisplayModeController.current)
-    }
-
-    /// Switches the panel's resolution, then re-resolves the touch mapping so taps keep
-    /// landing correctly at the new size.
-    func apply(mode: DisplayMode) {
-        guard let panelDisplayID else { return }
-        DisplayModeController.apply(mode, to: panelDisplayID)
-        objectWillChange.send()
-        restart()
-    }
 
     private func applyAndPersist() {
         try? configuration.save()
