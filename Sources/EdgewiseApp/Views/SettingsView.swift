@@ -54,23 +54,6 @@ struct SettingsView: View {
             }
 
             Section("Behaviour") {
-                Picker("When you touch", selection: Binding(
-                    get: { driver.configuration.deliveryMode },
-                    set: { driver.configuration.deliveryMode = $0; driver.restart() })) {
-                    Text("Move the cursor to the touch").tag(DeliveryMode.warp)
-                    Text("Leave the cursor where it is").tag(DeliveryMode.background)
-                }
-                .pickerStyle(.radioGroup)
-
-                if driver.configuration.deliveryMode == .background {
-                    Text("""
-                    Taps go straight to the app under your finger. Dragging windows \
-                    still moves the cursor — macOS requires it.
-                    """)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-
                 Toggle("Press and hold to right-click", isOn: Binding(
                     get: { driver.configuration.gesture.longPressRightClick },
                     set: { driver.configuration.gesture.longPressRightClick = $0 }))

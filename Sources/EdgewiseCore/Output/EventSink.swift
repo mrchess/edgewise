@@ -17,13 +17,6 @@ public final class RecordingEventSink: EventSink {
     public func releaseAll() {}
 }
 
-public enum DeliveryMode: String, Codable, Sendable, CaseIterable {
-    /// Move the real cursor to the touch point, click, and put it back.
-    case warp
-    /// Post events straight to the window under the finger. The cursor never moves.
-    case background
-}
-
 /// How a pinch reaches the application.
 public enum PinchDelivery: String, Codable, Sendable, CaseIterable {
     /// A real trackpad-style magnify gesture. Best fidelity — smooth zooming in

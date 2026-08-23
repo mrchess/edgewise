@@ -6,7 +6,6 @@ import Foundation
 /// Stored as JSON so the menu bar app and the daemon read the same file and neither
 /// has to be recompiled to change behaviour.
 public struct Configuration: Equatable, Codable, Sendable {
-    public var deliveryMode: DeliveryMode = .warp
     public var gesture = GestureConfiguration()
 
     /// Remembered so the right display is found again after a replug or reorder.

@@ -17,9 +17,13 @@ import Foundation
 ///    or the click is delivered mid-flight at the wrong place.
 public final class CGEventSink: EventSink {
     public struct Timings: Equatable, Sendable {
-        public var warpToClick: TimeInterval = 0.008
-        public var downToUp: TimeInterval = 0.020
-        public var clickToRestore: TimeInterval = 0.008
+        // The cursor is visibly at the touch point for the sum of these, so they are
+        // kept as short as the system will reliably register. Cursor hiding cannot
+        // cover the gap: CGDisplayHideCursor only applies while the calling app is
+        // frontmost, and this one is a background agent that never is.
+        public var warpToClick: TimeInterval = 0.004
+        public var downToUp: TimeInterval = 0.012
+        public var clickToRestore: TimeInterval = 0.004
         public init() {}
     }
 

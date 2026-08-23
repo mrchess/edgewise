@@ -13,8 +13,8 @@ other panels built on the same WCH touch controller.
 Multi-finger gestures — two-finger scroll, two-finger tap, pinch — are implemented and
 tested, but **do not currently work on the Xeneon Edge**. See below.
 
-Plus a mode that posts taps straight to the app under your finger, so your cursor never
-leaves the main display at all.
+The cursor jumps to your touch, clicks, and returns to where it was — so you can hit a
+control on the panel without losing your place on the main display.
 
 ## Install
 

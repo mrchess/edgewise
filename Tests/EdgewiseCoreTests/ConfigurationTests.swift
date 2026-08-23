@@ -7,7 +7,6 @@ struct ConfigurationTests {
     @Test("round-trips through JSON without losing anything")
     func roundTrip() throws {
         var config = Configuration()
-        config.deliveryMode = .background
         config.gesture.longPressDelay = 0.75
         config.gesture.dragThreshold = 9
         config.isFlipped = true
@@ -26,7 +25,6 @@ struct ConfigurationTests {
         let url = URL(fileURLWithPath: "/nonexistent/edgewise/config.json")
         let config = Configuration.load(from: url)
         #expect(config == Configuration())
-        #expect(config.deliveryMode == .warp)
     }
 
     @Test("a corrupt file yields defaults rather than crashing")

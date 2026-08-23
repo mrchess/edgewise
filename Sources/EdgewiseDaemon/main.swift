@@ -9,7 +9,6 @@ if arguments.contains("--help") || arguments.contains("-h") {
     print("""
     edgewised — Edgewise touch driver
 
-      --mode warp|background   Override the configured delivery mode
       --config <path>          Use an alternate configuration file
       --version                Print version and exit
     """)
@@ -21,17 +20,12 @@ if arguments.contains("--version") {
     exit(0)
 }
 
-var configuration: Configuration = {
+let configuration: Configuration = {
     if let index = arguments.firstIndex(of: "--config"), index + 1 < arguments.count {
         return Configuration.load(from: URL(fileURLWithPath: arguments[index + 1]))
     }
     return Configuration.load()
 }()
-
-if let index = arguments.firstIndex(of: "--mode"), index + 1 < arguments.count,
-   let mode = DeliveryMode(rawValue: arguments[index + 1]) {
-    configuration.deliveryMode = mode
-}
 
 let driver = Driver(configuration: configuration)
 driver.onStatusChange = { status in

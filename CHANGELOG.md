@@ -24,8 +24,6 @@ see [README](README.md#what-was-taken-from-where) for what came from where.
 - Double-tap registers as a double-click.
 - Pinch is delivered either as a real trackpad magnify gesture or as command-scroll,
   selectable in settings.
-- `background` delivery mode: taps post directly to the app under your finger, leaving
-  the cursor untouched on the main display.
 - Menu bar app with first-run onboarding, live permission state, and a display picker.
   Start-at-login via `SMAppService` — no LaunchAgent plist, no install script.
 - `edgewise-diag` with `doctor`, `devices`, `displays`, `record`, and `replay`.

@@ -54,14 +54,9 @@ public final class Driver {
     }
 
     static func makeSink(for configuration: Configuration) -> EventSink {
-        let warp = CGEventSink(restoreCursor: configuration.restoreCursor,
-                               hideCursorDuringClick: configuration.hideCursorDuringClick,
-                               pinchDelivery: configuration.pinchDelivery)
-        HIDTrace.log("sink: deliveryMode=\(configuration.deliveryMode.rawValue)")
-        switch configuration.deliveryMode {
-        case .warp:       return warp
-        case .background: return BackgroundEventSink(fallback: warp)
-        }
+        CGEventSink(restoreCursor: configuration.restoreCursor,
+                    hideCursorDuringClick: configuration.hideCursorDuringClick,
+                    pinchDelivery: configuration.pinchDelivery)
     }
 
     // MARK: - Lifecycle
