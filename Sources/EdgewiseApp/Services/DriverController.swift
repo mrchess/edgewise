@@ -32,12 +32,18 @@ final class DriverController: ObservableObject {
 
     var isRunning: Bool { if case .running = status { true } else { false } }
 
-    var statusDescription: String {
+    var statusDescription: String { Self.describe(status) }
+
+    static func describe(_ status: Driver.Status) -> String {
         switch status {
         case .stopped: "Not running"
         case .running(let display): "Running on \(display)"
         case .failed(let message): message
         }
+    }
+
+    static func isRunning(_ status: Driver.Status) -> Bool {
+        if case .running = status { true } else { false }
     }
 
     func start() {

@@ -28,9 +28,13 @@ final class StatusItemController {
             .sink { [weak self] visible in self?.setVisible(visible) }
             .store(in: &cancellables)
 
+        // `@Published` emits in `willSet`, so the property has not been updated yet
+        // when this fires. Render the status the publisher hands us rather than
+        // re-reading the driver, or the menu is permanently one change behind and
+        // reports "Not running" while the driver is running.
         driver.$status
             .removeDuplicates()
-            .sink { [weak self] _ in self?.refresh() }
+            .sink { [weak self] status in self?.refresh(status) }
             .store(in: &cancellables)
     }
 
@@ -47,28 +51,30 @@ final class StatusItemController {
                                      accessibilityDescription: "Edgewise")
         item.menu = NSMenu()
         self.item = item
-        refresh()
+        refresh(driver.status)
     }
 
     /// Rebuilds the menu contents in place. Cheap, and only ever driven by an actual
     /// change in driver status.
-    private func refresh() {
+    private func refresh(_ status: Driver.Status) {
         guard let item else { return }
+        let running = DriverController.isRunning(status)
 
         item.button?.image = NSImage(
-            systemSymbolName: driver.isRunning ? "hand.tap.fill" : "hand.tap",
+            systemSymbolName: running ? "hand.tap.fill" : "hand.tap",
             accessibilityDescription: "Edgewise")
 
         let menu = NSMenu()
-        let status = NSMenuItem(title: driver.statusDescription, action: nil, keyEquivalent: "")
-        status.isEnabled = false
-        menu.addItem(status)
+        let statusItem = NSMenuItem(title: DriverController.describe(status),
+                                    action: nil, keyEquivalent: "")
+        statusItem.isEnabled = false
+        menu.addItem(statusItem)
         menu.addItem(.separator())
 
         let toggle = NSMenuItem(title: "Enable touch",
                                 action: #selector(toggleTouch), keyEquivalent: "")
         toggle.target = self
-        toggle.state = driver.isRunning ? .on : .off
+        toggle.state = running ? .on : .off
         menu.addItem(toggle)
         menu.addItem(.separator())
 
@@ -87,7 +93,7 @@ final class StatusItemController {
 
     @objc private func toggleTouch() {
         driver.isRunning ? driver.stop() : driver.start()
-        refresh()
+        refresh(driver.status)
     }
 
     @objc private func openSettings() { showSettings() }
