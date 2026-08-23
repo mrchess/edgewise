@@ -5,7 +5,8 @@ import SwiftUI
 struct MenuContentView: View {
     @EnvironmentObject private var driver: DriverController
     @EnvironmentObject private var permissions: Permissions
-    @Environment(\.openWindow) private var openWindow
+    /// Supplied by the app delegate, which owns the settings window.
+    let showSettings: () -> Void
 
     var body: some View {
         Text(driver.statusDescription)
@@ -43,7 +44,7 @@ struct MenuContentView: View {
 
         Divider()
 
-        Button("Settings…") { openWindow(id: "main") }
+        Button("Settings…") { showSettings() }
             .keyboardShortcut(",", modifiers: .command)
 
         Button("Quit Edgewise") { NSApplication.shared.terminate(nil) }
