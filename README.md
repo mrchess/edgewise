@@ -6,6 +6,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey)
 ![Universal](https://img.shields.io/badge/arch-universal-lightgrey)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/mrchess/edgewise?style=flat&logo=github)](https://github.com/mrchess/edgewise/stargazers)
 
 macOS has no native touchscreen support, so it reads the panel as a *relative* pointing
 device — your finger nudges the cursor from wherever it already sat, like a trackpad.
@@ -151,8 +152,6 @@ preferring Developer ID over Apple Development. Set `NOTARY_PROFILE` to a stored
 `notarytool` profile to notarise and staple.
 
 ## Credits
-
-An independent MIT implementation that draws on prior MIT-licensed work:
 
 - [ymlaine/TouchscreenDriver](https://github.com/ymlaine/TouchscreenDriver) — the
   original seize-and-map approach, and the panel's USB identity.
