@@ -34,4 +34,35 @@ struct ConfigurationTests {
         try Data("{ not json".utf8).write(to: url)
         #expect(Configuration.load(from: url) == Configuration())
     }
+
+    @Test("strip fields round-trip and default off")
+    func stripFields() throws {
+        var config = Configuration()
+        #expect(config.stripEnabled == false)
+        #expect(config.stripButtons.isEmpty)
+
+        #expect(config.stripFraction == .full)
+        #expect(config.stripEdge == .trailing)
+
+        config.stripEnabled = true
+        config.stripButtons = [StripButton(bundleIdentifier: "com.apple.Safari", title: "Safari")]
+        config.stripFraction = .half
+        config.stripEdge = .leading
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("edgewise-strip-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try config.save(to: url)
+        #expect(Configuration.load(from: url) == config)
+    }
+
+    @Test("a config written before the strip existed still loads")
+    func backwardCompatible() throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("edgewise-old-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data(#"{"restoreCursor":true,"startAtLogin":true}"#.utf8).write(to: url)
+        let loaded = Configuration.load(from: url)
+        #expect(loaded.stripEnabled == false)
+        #expect(loaded.stripButtons.isEmpty)
+    }
 }

@@ -18,6 +18,16 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var restoreCursor: Bool = true
     public var startAtLogin: Bool = true
 
+    /// Show the app-button strip on the panel. Off by default. Only meaningful whilst
+    /// touch is enabled, since the strip is unresponsive otherwise.
+    public var stripEnabled: Bool = false
+    /// The apps shown on the strip, in display order.
+    public var stripButtons: [StripButton] = []
+    /// How much of the panel the strip occupies.
+    public var stripFraction: StripFraction = .full
+    /// Which side a partial strip sits on. Ignored when the strip is full.
+    public var stripEdge: StripEdge = .trailing
+
     public init() {}
 
     public static let fileName = "config.json"
