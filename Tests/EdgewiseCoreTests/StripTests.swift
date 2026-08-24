@@ -107,3 +107,14 @@ struct StripPlacementTests {
         }
     }
 }
+
+@Suite("App activation")
+struct AppActivatorTests {
+    @Test("activating a button records its bundle identifier")
+    func recordsBundleID() {
+        let activator = RecordingAppActivator()
+        let button = StripButton(bundleIdentifier: "com.apple.Safari", title: "Safari")
+        activator.activate(bundleIdentifier: button.bundleIdentifier)
+        #expect(activator.activated == ["com.apple.Safari"])
+    }
+}
