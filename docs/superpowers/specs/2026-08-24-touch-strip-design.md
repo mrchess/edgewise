@@ -13,11 +13,22 @@ It ships inside Edgewise, off by default.
 
 ## Decisions taken, and why
 
-**The strip owns the panel.** It fills the display whenever it is enabled; there is no
-dismissing it to reveal the desktop underneath. A dismissible overlay would need a way
-to summon it back by touch alone, which is a gesture vocabulary this hardware cannot
-support — it reports one contact at a time. At 32:9 and under four inches tall the panel
-is a poor general-purpose display anyway.
+**The strip is a window, sized to a fraction of the panel.** It fills the whole panel by
+default, but can instead take the left or right half or third, leaving the rest as
+ordinary desktop. It is not a dismissible overlay — there is no summoning it back by
+touch, a gesture this one-contact hardware cannot express — but a fixed fraction is a
+different thing: the split is set in settings and stays put.
+
+The fraction matters because a 32:9 panel divides into unexpected shapes. Half of it is
+a clean 1280×720 — exactly what a video or a chat window wants — so "buttons on the left,
+a real 16:9 area on the right" is a genuinely useful layout, not a compromise. A third
+leaves a wide 21:9 sliver. Splits are left/right only; a top or bottom band on a 32:9
+panel would be 2560 wide and a couple of hundred tall, too short for a decent button.
+
+The leftover area is live, not dead space: Edgewise maps touch across the whole panel, so
+a tap outside the strip clicks whatever is there. This needs no driver change — the strip
+is a real window at real coordinates, so a click lands on it or on the desktop beneath by
+position, exactly as any two overlapping windows behave.
 
 **It lives inside Edgewise rather than beside it.** macOS treats every `.app` as its own
 TCC subject, so a separate app would mean granting Accessibility twice and reasoning
@@ -75,9 +86,12 @@ EdgewiseApp/Views/StripSettingsView.swift  add, remove, reorder
 
 ### The window
 
-A borderless `NSPanel` created with `.nonactivatingPanel`, framed to the panel's
-`CGDisplayBounds`, at floating level, with `canBecomeKey` false and
-`collectionBehavior` including `.canJoinAllSpaces` and `.stationary`.
+A borderless `NSPanel` created with `.nonactivatingPanel`, framed to the strip's
+sub-rectangle of the panel — the full `CGDisplayBounds`, or the left/right half or third
+of it — at floating level, with `canBecomeKey` false and `collectionBehavior` including
+`.canJoinAllSpaces` and `.stationary`. The sub-rectangle is computed by a pure function
+(`StripPlacement.frame(in:fraction:edge:)`) so the geometry is unit-tested apart from any
+window.
 
 The non-activating style is load-bearing. An ordinary window takes focus when clicked,
 so tapping a button would activate the strip, then the target app, and whatever the user
@@ -122,10 +136,14 @@ Persisted in the existing `config.json`:
 ```swift
 var stripEnabled: Bool = false
 var stripButtons: [StripButton] = []
+var stripFraction: StripFraction = .full   // .full | .half | .third
+var stripEdge: StripEdge = .trailing       // .leading | .trailing
 ```
 
-Settings gains a **Strip** section: a toggle, and a list with add, remove, and
-drag-to-reorder. Add opens an application chooser at `/Applications`.
+Settings gains a **Strip** section: a toggle, a list with add, remove, and
+drag-to-reorder, and — when the strip is not full — a pair of pickers for how much of
+the panel it takes and which side it sits on. Add opens an application chooser at
+`/Applications`. The side picker is hidden at `.full`, where an edge is meaningless.
 
 Enabling the strip requires touch to be enabled, and the UI says so rather than letting
 someone configure a surface that cannot respond. The strip is only tappable because the
@@ -139,6 +157,9 @@ Pure and unit-tested:
 - `StripButton` round-trips through JSON.
 - `StripLayout` returns one row while buttons fit, two once they do not, and never a
   zero or negative size.
+- `StripPlacement.frame` returns the full rect at `.full`; a left/right half or third at
+  the smaller fractions, on the requested edge; and a sub-rect that is always inside the
+  display and never zero-width.
 - An uninstalled bundle identifier resolves to a dimmed state rather than an error.
 - A recording `AppActivator` confirms a tap maps to the expected bundle identifier.
 

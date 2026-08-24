@@ -218,16 +218,143 @@ git commit -m "Add strip layout"
 
 ---
 
-### Task 3: Configuration fields
+### Task 3: Strip placement geometry
+
+**Files:**
+- Create: `Sources/EdgewiseCore/Strip/StripPlacement.swift`
+- Modify: `Tests/EdgewiseCoreTests/StripTests.swift`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces:
+  - `enum StripFraction: String, Codable, Sendable, CaseIterable { case full, half, third }`
+    with `var value: CGFloat` returning `1`, `0.5`, `1.0/3`.
+  - `enum StripEdge: String, Codable, Sendable, CaseIterable { case leading, trailing }`.
+  - `enum StripPlacement` with
+    `static func frame(in display: CGRect, fraction: StripFraction, edge: StripEdge) -> CGRect`.
+    Returns `display` unchanged at `.full`. Otherwise a vertical band of width
+    `display.width * fraction.value`, full height, on the left (`.leading`) or right
+    (`.trailing`). The result is always inside `display` and never zero-width.
+
+- [ ] **Step 1: Write the failing test**
+
+```swift
+@Suite("Strip placement")
+struct StripPlacementTests {
+    let display = CGRect(x: 880, y: 1440, width: 2560, height: 720)
+
+    @Test("full fills the whole display")
+    func full() {
+        let f = StripPlacement.frame(in: display, fraction: .full, edge: .trailing)
+        #expect(f == display)
+    }
+
+    @Test("half on the trailing edge is the right 1280 columns")
+    func trailingHalf() {
+        let f = StripPlacement.frame(in: display, fraction: .half, edge: .trailing)
+        #expect(f.width == 1280)
+        #expect(f.height == 720)
+        #expect(f.maxX == display.maxX)          // hugs the right edge
+        #expect(f.minX == display.minX + 1280)
+    }
+
+    @Test("half on the leading edge is the left 1280 columns")
+    func leadingHalf() {
+        let f = StripPlacement.frame(in: display, fraction: .half, edge: .leading)
+        #expect(f.minX == display.minX)          // hugs the left edge
+        #expect(f.width == 1280)
+    }
+
+    @Test("a third is a third of the width, full height, inside the display")
+    func third() {
+        let f = StripPlacement.frame(in: display, fraction: .third, edge: .trailing)
+        #expect(abs(f.width - 2560.0 / 3) < 0.001)
+        #expect(display.contains(f))
+    }
+
+    @Test("every fraction and edge stays inside the display and is non-empty")
+    func alwaysValid() {
+        for fraction in StripFraction.allCases {
+            for edge in StripEdge.allCases {
+                let f = StripPlacement.frame(in: display, fraction: fraction, edge: edge)
+                #expect(f.width > 0 && f.height > 0)
+                #expect(display.contains(f) || f == display)
+            }
+        }
+    }
+}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `swift test --filter StripPlacementTests`
+Expected: FAIL — `cannot find 'StripPlacement' in scope`.
+
+- [ ] **Step 3: Write minimal implementation**
+
+```swift
+import CoreGraphics
+import Foundation
+
+/// How much of the panel the strip occupies.
+public enum StripFraction: String, Codable, Sendable, CaseIterable {
+    case full, half, third
+    public var value: CGFloat {
+        switch self {
+        case .full:  1
+        case .half:  0.5
+        case .third: 1.0 / 3
+        }
+    }
+}
+
+/// Which side a partial strip sits on. Splits are horizontal only — a top or bottom
+/// band on a 32:9 panel would be too short for a usable button.
+public enum StripEdge: String, Codable, Sendable, CaseIterable {
+    case leading, trailing
+}
+
+/// Works out the strip's rectangle within the panel. Pure geometry, so it is tested
+/// without ever making a window.
+public enum StripPlacement {
+    public static func frame(in display: CGRect,
+                             fraction: StripFraction,
+                             edge: StripEdge) -> CGRect {
+        guard fraction != .full else { return display }
+        let width = display.width * fraction.value
+        // CGRect uses a left-origin x, so a leading (left) strip starts at minX and a
+        // trailing (right) one starts that width in from the right edge.
+        let x = edge == .leading ? display.minX : display.maxX - width
+        return CGRect(x: x, y: display.minY, width: width, height: display.height)
+    }
+}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `swift test --filter StripPlacementTests`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Sources/EdgewiseCore/Strip/StripPlacement.swift Tests/EdgewiseCoreTests/StripTests.swift
+git commit -m "Add strip placement geometry"
+```
+
+---
+
+### Task 4: Configuration fields
 
 **Files:**
 - Modify: `Sources/EdgewiseCore/Config/Configuration.swift`
 - Modify: `Tests/EdgewiseCoreTests/ConfigurationTests.swift`
 
 **Interfaces:**
-- Consumes: `StripButton` (Task 1).
-- Produces: on `Configuration`, `var stripEnabled: Bool = false` and
-  `var stripButtons: [StripButton] = []`. Existing configs without these keys still
+- Consumes: `StripButton` (Task 1), `StripFraction` and `StripEdge` (Task 3).
+- Produces: on `Configuration`, `var stripEnabled: Bool = false`,
+  `var stripButtons: [StripButton] = []`, `var stripFraction: StripFraction = .full`, and
+  `var stripEdge: StripEdge = .trailing`. Existing configs without these keys still
   decode (they default), which is already guaranteed by the struct's synthesised
   `Codable` plus default values.
 
@@ -242,8 +369,13 @@ func stripFields() throws {
     #expect(config.stripEnabled == false)
     #expect(config.stripButtons.isEmpty)
 
+    #expect(config.stripFraction == .full)
+    #expect(config.stripEdge == .trailing)
+
     config.stripEnabled = true
     config.stripButtons = [StripButton(bundleIdentifier: "com.apple.Safari", title: "Safari")]
+    config.stripFraction = .half
+    config.stripEdge = .leading
     let url = URL(fileURLWithPath: NSTemporaryDirectory())
         .appendingPathComponent("edgewise-strip-\(UUID().uuidString).json")
     defer { try? FileManager.default.removeItem(at: url) }
@@ -278,6 +410,10 @@ In `Configuration.swift`, after `public var startAtLogin: Bool = true`:
     public var stripEnabled: Bool = false
     /// The apps shown on the strip, in display order.
     public var stripButtons: [StripButton] = []
+    /// How much of the panel the strip occupies.
+    public var stripFraction: StripFraction = .full
+    /// Which side a partial strip sits on. Ignored when the strip is full.
+    public var stripEdge: StripEdge = .trailing
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -294,7 +430,7 @@ git commit -m "Add strip fields to the configuration"
 
 ---
 
-### Task 4: The app activator
+### Task 5: The app activator
 
 **Files:**
 - Create: `Sources/EdgewiseApp/Strip/AppActivator.swift`
@@ -395,7 +531,7 @@ git commit -m "Add the app activator, with a recording double for tests"
 
 ---
 
-### Task 5: App metadata lookup
+### Task 6: App metadata lookup
 
 **Files:**
 - Create: `Sources/EdgewiseApp/Strip/InstalledApp.swift`
@@ -469,13 +605,13 @@ git commit -m "Add installed-app lookup and the app chooser"
 
 ---
 
-### Task 6: The strip view
+### Task 7: The strip view
 
 **Files:**
 - Create: `Sources/EdgewiseApp/Strip/StripView.swift`
 
 **Interfaces:**
-- Consumes: `StripButton` (1), `StripLayout` (2), `AppActivator` (4), `AppCatalog` (5).
+- Consumes: `StripButton` (1), `StripLayout` (2), `AppActivator` (5), `AppCatalog` (6).
 - Produces: `struct StripView: View` initialised with
   `init(buttons: [StripButton], activator: AppActivator)`. Renders a grid using
   `StripLayout.arrange`, one cell per button, each showing the app icon (dimmed when
@@ -564,20 +700,21 @@ git commit -m "Add the strip view"
 
 ---
 
-### Task 7: The strip window controller
+### Task 8: The strip window controller
 
 **Files:**
 - Create: `Sources/EdgewiseApp/Strip/StripWindowController.swift`
 
 **Interfaces:**
-- Consumes: `StripView` (6), `WorkspaceAppActivator` (4), `DisplayResolver` +
-  `DisplayProvider` + `Configuration` (existing core).
+- Consumes: `StripView` (7), `WorkspaceAppActivator` (5), `StripPlacement` (3),
+  `DisplayResolver` + `DisplayProvider` + `Configuration` (existing core).
 - Produces: `@MainActor final class StripWindowController` with
   `func update(configuration: Configuration, touchActive: Bool)` — shows the panel framed
-  to the resolved display when `touchActive` and `stripEnabled` are both true and the
-  panel is found, hides it otherwise. `touchActive` is a parameter rather than read from
-  anywhere because the controller has no reference to the driver; Task 8 passes
-  `driver.isRunning`. Uses a `.nonactivatingPanel` so a tap never steals focus.
+  to the strip's placement within the resolved display when `touchActive` and
+  `stripEnabled` are both true and the panel is found, hides it otherwise. `touchActive`
+  is a parameter rather than read from anywhere because the controller has no reference to
+  the driver; Task 9 passes `driver.isRunning`. Uses a `.nonactivatingPanel` so a tap
+  never steals focus.
 
 - [ ] **Step 1: Implement (AppKit window management — verified by build and manual testing)**
 
@@ -639,13 +776,20 @@ final class StripWindowController {
         return panel
     }
 
-    /// The resolved touch display's bounds, in the bottom-left origin AppKit windows use.
+    /// The strip's frame within the resolved touch display, in the bottom-left origin
+    /// AppKit windows use.
     private func panelFrame(for configuration: Configuration) -> NSRect? {
         let criteria = DisplayResolver.Criteria(identity: configuration.displayIdentity)
         guard let match = DisplayResolver(criteria: criteria)
             .resolve(among: DisplayProvider.current()) else { return nil }
-        // CGDisplayBounds is top-left origin; convert to the main display's bottom-left.
-        let cg = match.display.bounds
+
+        // Apply the placement in CGDisplay's own top-left space first, where "leading"
+        // means smaller x — the same handedness StripPlacement assumes — then flip the
+        // whole result into AppKit's bottom-left space once. Flipping before placing
+        // would send a leading strip to the wrong side.
+        let cg = StripPlacement.frame(in: match.display.bounds,
+                                      fraction: configuration.stripFraction,
+                                      edge: configuration.stripEdge)
         let mainHeight = CGDisplayBounds(CGMainDisplayID()).height
         return NSRect(x: cg.minX, y: mainHeight - cg.maxY,
                       width: cg.width, height: cg.height)
@@ -667,7 +811,7 @@ git commit -m "Add the strip window controller"
 
 ---
 
-### Task 8: Wire the controller into the app lifecycle
+### Task 9: Wire the controller into the app lifecycle
 
 **Files:**
 - Modify: `Sources/EdgewiseApp/Services/AppServices.swift`
@@ -675,7 +819,7 @@ git commit -m "Add the strip window controller"
 - Modify: `Sources/EdgewiseApp/EdgewiseApp.swift`
 
 **Interfaces:**
-- Consumes: `StripWindowController` (7), the existing `DriverController` and
+- Consumes: `StripWindowController` (8), the existing `DriverController` and
   `AppServices`.
 - Produces: the strip appears/updates whenever configuration changes or displays change,
   and is torn down when touch is disabled.
@@ -739,16 +883,18 @@ git commit -m "Show the strip while touch is on, and keep it framed to the panel
 
 ---
 
-### Task 9: Settings UI
+### Task 10: Settings UI
 
 **Files:**
 - Create: `Sources/EdgewiseApp/Views/StripSettingsView.swift`
 - Modify: `Sources/EdgewiseApp/Views/SettingsView.swift`
 
 **Interfaces:**
-- Consumes: `StripButton` (1), `AppCatalog` (5), the `DriverController` environment object.
+- Consumes: `StripButton` (1), `StripFraction`/`StripEdge` (3), `AppCatalog` (6), the
+  `DriverController` environment object.
 - Produces: a **Strip** section in settings — an enable toggle (disabled, with an
-  explanation, when touch is off), and a reorderable list of buttons with add and remove.
+  explanation, when touch is off), a reorderable list of buttons with add and remove, and
+  size/side pickers shown when the strip is not full.
 
 - [ ] **Step 1: Implement (SwiftUI — verified by build and manual testing)**
 
@@ -803,6 +949,26 @@ struct StripSettingsView: View {
                             StripButton(bundleIdentifier: app.bundleIdentifier, title: app.name))
                     }
                 }
+
+                Picker("Size", selection: Binding(
+                    get: { driver.configuration.stripFraction },
+                    set: { driver.configuration.stripFraction = $0 })) {
+                    Text("Whole panel").tag(StripFraction.full)
+                    Text("Half").tag(StripFraction.half)
+                    Text("A third").tag(StripFraction.third)
+                }
+
+                // An edge is meaningless when the strip fills the panel, so the side
+                // picker only appears once a fraction has been chosen.
+                if driver.configuration.stripFraction != .full {
+                    Picker("Side", selection: Binding(
+                        get: { driver.configuration.stripEdge },
+                        set: { driver.configuration.stripEdge = $0 })) {
+                        Text("Left").tag(StripEdge.leading)
+                        Text("Right").tag(StripEdge.trailing)
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
         }
     }
@@ -820,7 +986,10 @@ Expected: builds clean, tests pass.
 - [ ] **Step 3: Manual verification**
 
 Open settings, enable the strip, add Safari and Notes with "Add app…", reorder them,
-remove one, and confirm the strip on the panel updates to match after each change.
+remove one, and confirm the strip on the panel updates to match after each change. Then
+set the size to Half and switch the side between Left and Right: the strip should occupy
+that half of the panel on the chosen side, and the other half should show the desktop —
+tapping there should click the desktop, not a button.
 
 - [ ] **Step 4: Commit**
 
@@ -831,7 +1000,7 @@ git commit -m "Add the strip settings section"
 
 ---
 
-### Task 10: Documentation
+### Task 11: Documentation
 
 **Files:**
 - Modify: `README.md`
@@ -848,7 +1017,9 @@ Add to the "What works" area a short subsection:
 
 Turn on **Show an app strip** in settings and the panel becomes a row of app buttons:
 tap one to bring that app forward. Add, remove and reorder the apps in settings. The
-strip is only tappable while touch is enabled, since it relies on the driver.
+strip can take the whole panel, or its left or right half or third — leaving the rest as
+ordinary desktop you can still touch. The strip is only tappable while touch is enabled,
+since it relies on the driver.
 
 It activates the app and stops there — it does not try to place the caret in a text box.
 That was tried and abandoned deliberately: the apps people reach for either focus their
@@ -881,11 +1052,13 @@ git commit -m "Document the app strip"
 - **The AppActivator protocol lives in `EdgewiseCore`, its AppKit conformance in
   `EdgewiseApp`.** This is deliberate: the test target can only see `EdgewiseCore`, so the
   protocol and its recording double must live there, while `NSWorkspace` code stays in the
-  app target. Task 4's Files block reflects the corrected placement, not the first line's
+  app target. Task 5's Files block reflects the corrected placement, not the first line's
   crossed-out attempt.
-- **Coordinate flip.** `CGDisplayBounds` is top-left origin; `NSWindow` frames are
-  bottom-left. Task 7 converts once, the same way `CGEventSink` does. If the strip appears
-  on the wrong display or vertically mirrored, that conversion is the first suspect.
+- **Placement, then flip — in that order.** `StripPlacement` (Task 3) works in
+  `CGDisplayBounds`' top-left space, where "leading" is smaller x. Task 8 places the strip
+  there first and flips the whole result to `NSWindow`'s bottom-left space once. Flipping
+  the display rect first and placing afterwards would send a left strip to the right. If a
+  half strip lands on the wrong side or upside down, this ordering is the first suspect.
 - **Focus theft** is the highest manual-test risk. The `.nonactivatingPanel` style is what
   prevents it; if a tap is observed pulling focus to the strip, confirm the style mask
   includes `.nonactivatingPanel` and that `canBecomeKey` was not overridden to true.
