@@ -28,9 +28,13 @@ final class StripWindowController {
         }
         let panel = panel ?? makePanel()
         self.panel = panel
-        panel.setFrame(frame, display: true)
+        // Assign the content BEFORE framing. Setting `contentViewController` makes the
+        // window adopt the content's fitting size, and a SwiftUI view with no intrinsic
+        // size reports zero — collapsing the panel to 0×0. Framing afterwards is what
+        // actually sizes it to the strip.
         panel.contentViewController = NSHostingController(
             rootView: StripView(buttons: configuration.stripButtons, activator: activator))
+        panel.setFrame(frame, display: true)
         panel.orderFrontRegardless()
     }
 
