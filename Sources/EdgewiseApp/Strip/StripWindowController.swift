@@ -18,7 +18,10 @@ final class StripWindowController {
     /// no reference to it, and the strip must vanish the moment touch is turned off, not
     /// merely when `stripEnabled` is cleared — an untappable strip is worse than none.
     func update(configuration: Configuration, touchActive: Bool) {
-        guard touchActive, configuration.stripEnabled,
+        // Without any buttons the strip would just be a black rectangle sat over the
+        // panel with nothing tappable on it, so treat an empty button list the same as
+        // the strip being disabled.
+        guard touchActive, configuration.stripEnabled, !configuration.stripButtons.isEmpty,
               let frame = panelFrame(for: configuration) else {
             hide()
             return
