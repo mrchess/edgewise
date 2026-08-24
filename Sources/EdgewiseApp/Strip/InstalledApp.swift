@@ -18,6 +18,7 @@ enum AppCatalog {
     }
 
     /// Presents an open panel at /Applications and returns the chosen app's metadata.
+    @MainActor
     static func choose() -> InstalledApp? {
         let panel = NSOpenPanel()
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
