@@ -33,6 +33,26 @@ The cursor travels to your finger, clicks, and returns to where it was — about
 frame — so you can hit a control on the panel without losing your place on the main
 display. Turn the return off if you would rather it stayed where you tapped.
 
+## The app strip
+
+Turn on **Show an app strip** in settings and the panel becomes a row of app buttons:
+tap one to bring that app forward.
+
+<p align="center">
+  <img src="docs/images/strip.png" width="820" alt="The Corsair Xeneon Edge showing a row of app buttons — Safari, Slack, Chrome, Notes, Music, Finder — each with its real macOS icon">
+</p>
+
+Add, remove and reorder the apps in settings. The strip can take the whole panel or a
+left/right half, third, quarter or eighth of it — leaving the rest as ordinary desktop
+you can still touch — and lay the buttons out in a fixed number of rows or let them wrap
+on their own.
+
+It activates the app and stops there — it does not try to place the caret in a text box.
+That was tried and abandoned deliberately: the apps people reach for either focus their
+own input on activation or hide it behind a `contenteditable` no accessibility walk can
+find. See the
+[design note](docs/superpowers/specs/2026-08-24-touch-strip-design.md) for the evidence.
+
 ## What does not
 
 **Multi-finger gestures.** Two-finger scroll, two-finger tap and pinch are implemented

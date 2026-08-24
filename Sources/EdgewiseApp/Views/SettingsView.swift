@@ -120,6 +120,8 @@ struct SettingsView: View {
                 }
             }
 
+            StripSettingsView()
+
             Section("General") {
                 Toggle("Open at login", isOn: Binding(
                     get: { loginItem.isEnabled },

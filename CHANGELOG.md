@@ -5,6 +5,12 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [Unreleased]
 
+### Added
+
+- An optional app strip: the panel can show a row of app buttons, and tapping one
+  activates that app. It can take the whole panel or a left/right half or third, leaving
+  the rest as ordinary desktop. Off by default; configured in settings.
+
 ## [0.1.0] - 2026-08-23
 
 First release. A macOS touch driver for the Corsair Xeneon Edge: taps land where you
