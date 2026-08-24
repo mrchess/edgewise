@@ -13,6 +13,7 @@ final class AppServices {
     let driver = DriverController()
     let permissions = Permissions()
     let loginItem = LoginItem()
+    let stripWindow = StripWindowController()
 
     private init() {}
 }

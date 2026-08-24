@@ -35,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if services.permissions.allGranted {
                 services.driver.start()
             }
+            services.stripWindow.update(configuration: services.driver.configuration,
+                                        touchActive: services.driver.isRunning)
 
             // Show settings when there is something to do or see: permissions still
             // missing, or a first run. Starting silently with no window and no feedback

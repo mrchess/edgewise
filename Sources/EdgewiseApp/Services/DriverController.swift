@@ -61,12 +61,14 @@ final class DriverController: ObservableObject {
         self.driver = driver
         driver.start()
         status = driver.status
+        refreshStrip()
     }
 
     func stop() {
         driver?.stop()
         driver = nil
         status = .stopped
+        refreshStrip()
     }
 
     func restart() {
@@ -85,5 +87,14 @@ final class DriverController: ObservableObject {
     private func applyAndPersist() {
         try? configuration.save()
         driver?.apply(configuration)
+        refreshStrip()
+    }
+
+    /// Keeps the strip panel in step with configuration and run state. Called after
+    /// every change to either, rather than wired to a single event, because both can
+    /// change independently (settings edits vs. start/stop).
+    private func refreshStrip() {
+        AppServices.shared.stripWindow.update(configuration: configuration,
+                                              touchActive: isRunning)
     }
 }
