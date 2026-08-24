@@ -4,8 +4,6 @@ import AppKit
 struct InstalledApp {
     let bundleIdentifier: String
     let name: String
-    let icon: NSImage
-    let url: URL
 }
 
 enum AppCatalog {
@@ -30,7 +28,6 @@ enum AppCatalog {
               let id = bundle.bundleIdentifier else { return nil }
         let name = (bundle.infoDictionary?["CFBundleName"] as? String)
             ?? url.deletingPathExtension().lastPathComponent
-        return InstalledApp(bundleIdentifier: id, name: name,
-                            icon: NSWorkspace.shared.icon(forFile: url.path), url: url)
+        return InstalledApp(bundleIdentifier: id, name: name)
     }
 }
