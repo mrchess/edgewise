@@ -5,11 +5,22 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-24
+
 ### Added
 
-- An optional app strip: the panel can show a row of app buttons, and tapping one
-  activates that app. It can take the whole panel or a left/right half or third, leaving
-  the rest as ordinary desktop. Off by default; configured in settings.
+- **The app strip.** The panel can show a row of app buttons; tapping one activates that
+  app. Add, remove and reorder apps in settings. The strip can take the whole panel or a
+  left/right half, third, quarter or eighth, leaving the rest as ordinary desktop you can
+  still touch, and the buttons lay out in a fixed number of rows or wrap on their own.
+  Off by default. It activates the app and stops there — no caret placement; see the
+  README for why.
+
+### Fixed
+
+- A configuration written by 0.1.0 no longer loses its settings on upgrade. Synthesised
+  `Decodable` threw on any key added since, and the loader treated that as "no config"
+  and reset to defaults; a tolerant decoder now keeps what is present.
 
 ## [0.1.0] - 2026-08-23
 
@@ -56,5 +67,6 @@ Relative to the prior implementations this project draws on:
 - **Cursor warps are followed by an explicit `mouseMoved`**, so apps watching the mouse
   event stream see the cursor arrive before the click.
 
-[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mrchess/edgewise/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mrchess/edgewise/releases/tag/v0.1.0
