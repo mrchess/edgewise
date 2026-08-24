@@ -62,3 +62,48 @@ struct StripLayoutTests {
         #expect(l.buttonSize <= strip.height)
     }
 }
+
+@Suite("Strip placement")
+struct StripPlacementTests {
+    let display = CGRect(x: 880, y: 1440, width: 2560, height: 720)
+
+    @Test("full fills the whole display")
+    func full() {
+        let f = StripPlacement.frame(in: display, fraction: .full, edge: .trailing)
+        #expect(f == display)
+    }
+
+    @Test("half on the trailing edge is the right 1280 columns")
+    func trailingHalf() {
+        let f = StripPlacement.frame(in: display, fraction: .half, edge: .trailing)
+        #expect(f.width == 1280)
+        #expect(f.height == 720)
+        #expect(f.maxX == display.maxX)          // hugs the right edge
+        #expect(f.minX == display.minX + 1280)
+    }
+
+    @Test("half on the leading edge is the left 1280 columns")
+    func leadingHalf() {
+        let f = StripPlacement.frame(in: display, fraction: .half, edge: .leading)
+        #expect(f.minX == display.minX)          // hugs the left edge
+        #expect(f.width == 1280)
+    }
+
+    @Test("a third is a third of the width, full height, inside the display")
+    func third() {
+        let f = StripPlacement.frame(in: display, fraction: .third, edge: .trailing)
+        #expect(abs(f.width - 2560.0 / 3) < 0.001)
+        #expect(display.contains(f))
+    }
+
+    @Test("every fraction and edge stays inside the display and is non-empty")
+    func alwaysValid() {
+        for fraction in StripFraction.allCases {
+            for edge in StripEdge.allCases {
+                let f = StripPlacement.frame(in: display, fraction: fraction, edge: edge)
+                #expect(f.width > 0 && f.height > 0)
+                #expect(display.contains(f) || f == display)
+            }
+        }
+    }
+}
