@@ -36,10 +36,16 @@ display. Turn the return off if you would rather it stayed where you tapped.
 ## The app strip
 
 Turn on **Show an app strip** in settings and the panel becomes a row of app buttons:
-tap one to bring that app forward. Add, remove and reorder the apps in settings. The
-strip can take the whole panel, or its left or right half or third — leaving the rest as
-ordinary desktop you can still touch. It is only tappable while touch is enabled, since
-it relies on the driver.
+tap one to bring that app forward.
+
+<p align="center">
+  <img src="docs/images/strip.png" width="820" alt="The Corsair Xeneon Edge showing a row of app buttons — Safari, Slack, Chrome, Notes, Music, Finder — each with its real macOS icon">
+</p>
+
+Add, remove and reorder the apps in settings. The strip can take the whole panel or a
+left/right half, third, quarter or eighth of it — leaving the rest as ordinary desktop
+you can still touch — and lay the buttons out in a fixed number of rows or let them wrap
+on their own.
 
 It activates the app and stops there — it does not try to place the caret in a text box.
 That was tried and abandoned deliberately: the apps people reach for either focus their
