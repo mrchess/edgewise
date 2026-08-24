@@ -160,3 +160,21 @@ struct StripLayoutFixedRowsTests {
         #expect(l.buttonSize > 0)
     }
 }
+
+
+@Suite("Strip fraction values")
+struct StripFractionValueTests {
+    @Test("each fraction maps to its share of the width")
+    func values() {
+        #expect(StripFraction.full.value == 1)
+        #expect(StripFraction.half.value == 0.5)
+        #expect(abs(StripFraction.third.value - 1.0 / 3) < 1e-9)
+        #expect(StripFraction.quarter.value == 0.25)
+        #expect(StripFraction.eighth.value == 0.125)
+    }
+
+    @Test("an eighth of a 2560pt panel is one 320pt button wide")
+    func eighthIsOneButton() {
+        #expect(2560 * StripFraction.eighth.value == 320)
+    }
+}

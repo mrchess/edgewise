@@ -3,12 +3,17 @@ import Foundation
 
 /// How much of the panel the strip occupies.
 public enum StripFraction: String, Codable, Sendable, CaseIterable {
-    case full, half, third
+    case full, half, third, quarter, eighth
     public var value: CGFloat {
         switch self {
-        case .full:  1
-        case .half:  0.5
-        case .third: 1.0 / 3
+        case .full:    1
+        case .half:    0.5
+        case .third:   1.0 / 3
+        case .quarter: 0.25
+        // An eighth of the 2560pt panel is 320pt — exactly one button wide, and the
+        // smallest strip where a button still renders at its natural size. Anything
+        // narrower would force the buttons below that, so this is the sensible floor.
+        case .eighth:  0.125
         }
     }
 }

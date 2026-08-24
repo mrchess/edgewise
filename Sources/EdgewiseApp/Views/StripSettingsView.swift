@@ -53,6 +53,8 @@ struct StripSettingsView: View {
                     Text("Whole panel").tag(StripFraction.full)
                     Text("Half").tag(StripFraction.half)
                     Text("A third").tag(StripFraction.third)
+                    Text("A quarter").tag(StripFraction.quarter)
+                    Text("An eighth").tag(StripFraction.eighth)
                 }
 
                 Picker("Rows", selection: Binding(
