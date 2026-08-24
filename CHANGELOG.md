@@ -5,6 +5,17 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-24
+
+### Added
+
+- Reorder the strip's apps: each row in settings has up and down controls.
+
+### Fixed
+
+- The DMG build no longer fails intermittently on CI (`hdiutil` "Resource busy") — it
+  clears any stale mount and retries the image create.
+
 ## [0.2.0] - 2026-08-24
 
 ### Added
@@ -67,6 +78,7 @@ Relative to the prior implementations this project draws on:
 - **Cursor warps are followed by an explicit `mouseMoved`**, so apps watching the mouse
   event stream see the cursor arrive before the click.
 
-[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/mrchess/edgewise/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mrchess/edgewise/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mrchess/edgewise/releases/tag/v0.1.0
