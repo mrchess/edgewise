@@ -27,12 +27,16 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var stripFraction: StripFraction = .full
     /// Which side a partial strip sits on. Ignored when the strip is full.
     public var stripEdge: StripEdge = .trailing
+    /// Fixed number of button rows. Zero means lay them out automatically, wrapping
+    /// only when a single row would make the buttons too narrow.
+    public var stripRows: Int = 0
 
     public init() {}
 
     enum CodingKeys: String, CodingKey {
         case gesture, displayIdentity, logicalMaxX, logicalMaxY, pinchDelivery,
-             restoreCursor, startAtLogin, stripEnabled, stripButtons, stripFraction, stripEdge
+             restoreCursor, startAtLogin, stripEnabled, stripButtons, stripFraction,
+             stripEdge, stripRows
     }
 
     /// Tolerates a config written by an older Edgewise that lacks keys added since.
@@ -72,6 +76,9 @@ public struct Configuration: Equatable, Codable, Sendable {
         }
         if let v = try container.decodeIfPresent(StripEdge.self, forKey: .stripEdge) {
             config.stripEdge = v
+        }
+        if let v = try container.decodeIfPresent(Int.self, forKey: .stripRows) {
+            config.stripRows = v
         }
         self = config
     }

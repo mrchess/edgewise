@@ -33,7 +33,8 @@ final class StripWindowController {
         // size reports zero — collapsing the panel to 0×0. Framing afterwards is what
         // actually sizes it to the strip.
         panel.contentViewController = NSHostingController(
-            rootView: StripView(buttons: configuration.stripButtons, activator: activator))
+            rootView: StripView(buttons: configuration.stripButtons, activator: activator,
+                                fixedRows: configuration.stripRows))
         panel.setFrame(frame, display: true)
         panel.orderFrontRegardless()
     }

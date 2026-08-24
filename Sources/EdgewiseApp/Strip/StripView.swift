@@ -5,12 +5,15 @@ import SwiftUI
 struct StripView: View {
     let buttons: [StripButton]
     let activator: AppActivator
+    /// Force this many rows; zero lays the buttons out automatically.
+    var fixedRows: Int = 0
 
     var body: some View {
         GeometryReader { geo in
             let layout = StripLayout.arrange(count: buttons.count,
                                              in: CGSize(width: geo.size.width,
-                                                        height: geo.size.height))
+                                                        height: geo.size.height),
+                                             fixedRows: fixedRows)
             let columns = Array(repeating: GridItem(.flexible(), spacing: 0),
                                 count: max(layout.columns, 1))
             LazyVGrid(columns: columns, spacing: 0) {

@@ -55,6 +55,13 @@ struct StripSettingsView: View {
                     Text("A third").tag(StripFraction.third)
                 }
 
+                Picker("Rows", selection: Binding(
+                    get: { driver.configuration.stripRows },
+                    set: { driver.configuration.stripRows = $0 })) {
+                    Text("Automatic").tag(0)
+                    ForEach(1...4, id: \.self) { n in Text("\(n)").tag(n) }
+                }
+
                 // An edge is meaningless when the strip fills the panel, so the side
                 // picker only appears once a fraction has been chosen.
                 if driver.configuration.stripFraction != .full {

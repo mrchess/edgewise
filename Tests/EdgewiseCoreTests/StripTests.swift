@@ -118,3 +118,45 @@ struct AppActivatorTests {
         #expect(activator.activated == ["com.apple.Safari"])
     }
 }
+
+
+@Suite("Strip layout with fixed rows")
+struct StripLayoutFixedRowsTests {
+    let strip = CGSize(width: 2560, height: 720)
+
+    @Test("fixedRows forces exactly that many rows regardless of width")
+    func forcesRows() {
+        // 6 buttons would sit in one row automatically; forcing 2 gives 2x3.
+        let l = StripLayout.arrange(count: 6, in: strip, fixedRows: 2)
+        #expect(l.rows == 2)
+        #expect(l.columns == 3)
+    }
+
+    @Test("three fixed rows over five buttons is 3x2 and covers the count")
+    func threeRows() {
+        let l = StripLayout.arrange(count: 5, in: strip, fixedRows: 3)
+        #expect(l.rows == 3)
+        #expect(l.rows * l.columns >= 5)
+    }
+
+    @Test("fixedRows never exceeds the button count")
+    func rowsCappedByCount() {
+        // Asking for 4 rows with only 2 buttons should not make empty rows.
+        let l = StripLayout.arrange(count: 2, in: strip, fixedRows: 4)
+        #expect(l.rows <= 2)
+    }
+
+    @Test("fixedRows zero keeps the automatic single-row behaviour")
+    func zeroIsAutomatic() {
+        let auto = StripLayout.arrange(count: 6, in: strip)
+        let explicit = StripLayout.arrange(count: 6, in: strip, fixedRows: 0)
+        #expect(auto == explicit)
+        #expect(explicit.rows == 1)
+    }
+
+    @Test("forced rows still yield a positive button size")
+    func positiveSize() {
+        let l = StripLayout.arrange(count: 8, in: strip, fixedRows: 4)
+        #expect(l.buttonSize > 0)
+    }
+}
