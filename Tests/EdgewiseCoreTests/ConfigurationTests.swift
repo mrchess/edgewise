@@ -55,13 +55,20 @@ struct ConfigurationTests {
         #expect(Configuration.load(from: url) == config)
     }
 
-    @Test("a config written before the strip existed still loads")
+    @Test("a config written before the strip existed still loads, keeping its old settings")
     func backwardCompatible() throws {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("edgewise-old-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: url) }
-        try Data(#"{"restoreCursor":true,"startAtLogin":true}"#.utf8).write(to: url)
+        // Non-default values for every pre-strip field, so a decoder that falls back to
+        // Configuration() on the missing strip keys (rather than tolerating them) would
+        // be caught: the asserts below would see the defaults instead of these.
+        try Data(#"{"restoreCursor":false,"startAtLogin":false,"pinchDelivery":"commandScroll"}"#.utf8)
+            .write(to: url)
         let loaded = Configuration.load(from: url)
+        #expect(loaded.restoreCursor == false)
+        #expect(loaded.startAtLogin == false)
+        #expect(loaded.pinchDelivery == .commandScroll)
         #expect(loaded.stripEnabled == false)
         #expect(loaded.stripButtons.isEmpty)
     }

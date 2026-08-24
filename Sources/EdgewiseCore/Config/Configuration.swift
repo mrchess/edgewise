@@ -30,6 +30,52 @@ public struct Configuration: Equatable, Codable, Sendable {
 
     public init() {}
 
+    enum CodingKeys: String, CodingKey {
+        case gesture, displayIdentity, logicalMaxX, logicalMaxY, pinchDelivery,
+             restoreCursor, startAtLogin, stripEnabled, stripButtons, stripFraction, stripEdge
+    }
+
+    /// Tolerates a config written by an older Edgewise that lacks keys added since.
+    ///
+    /// Synthesised `Decodable` throws `keyNotFound` for any absent non-optional key rather
+    /// than falling back to the property's default, and `Configuration.load(from:)` treats
+    /// any decode failure as "no config" and returns fresh defaults. Left to the synthesised
+    /// initialiser, adding a single new field (as `stripEnabled` and friends were) would
+    /// silently wipe every setting in an existing config the moment it was next loaded. This
+    /// starts from the defaults and only overwrites a field when its key is actually present.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        var config = Configuration()
+        if let v = try container.decodeIfPresent(GestureConfiguration.self, forKey: .gesture) {
+            config.gesture = v
+        }
+        config.displayIdentity = try container.decodeIfPresent(DisplayIdentity.self, forKey: .displayIdentity)
+        config.logicalMaxX = try container.decodeIfPresent(Int.self, forKey: .logicalMaxX)
+        config.logicalMaxY = try container.decodeIfPresent(Int.self, forKey: .logicalMaxY)
+        if let v = try container.decodeIfPresent(PinchDelivery.self, forKey: .pinchDelivery) {
+            config.pinchDelivery = v
+        }
+        if let v = try container.decodeIfPresent(Bool.self, forKey: .restoreCursor) {
+            config.restoreCursor = v
+        }
+        if let v = try container.decodeIfPresent(Bool.self, forKey: .startAtLogin) {
+            config.startAtLogin = v
+        }
+        if let v = try container.decodeIfPresent(Bool.self, forKey: .stripEnabled) {
+            config.stripEnabled = v
+        }
+        if let v = try container.decodeIfPresent([StripButton].self, forKey: .stripButtons) {
+            config.stripButtons = v
+        }
+        if let v = try container.decodeIfPresent(StripFraction.self, forKey: .stripFraction) {
+            config.stripFraction = v
+        }
+        if let v = try container.decodeIfPresent(StripEdge.self, forKey: .stripEdge) {
+            config.stripEdge = v
+        }
+        self = config
+    }
+
     public static let fileName = "config.json"
 
     /// `~/Library/Application Support/Edgewise/config.json`
