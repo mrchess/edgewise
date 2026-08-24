@@ -147,11 +147,26 @@ fi
 # compress. Sized with headroom for the metadata Finder writes.
 SIZE_KB=$(du -sk "$STAGE" | cut -f1)
 SIZE_MB=$(( SIZE_KB / 1024 + 24 ))
-rm -f "$RW_DMG"
-hdiutil create -volname "$VOLUME" -srcfolder "$STAGE" -ov \
-    -fs HFS+ -format UDRW -size "${SIZE_MB}m" "$RW_DMG" >/dev/null
-
 MOUNT_DIR="/Volumes/$VOLUME"
+# Detach a stale volume of the same name first — a CI runner is reused between jobs,
+# and a leftover mount makes the create below fail "Resource busy".
+hdiutil detach "$MOUNT_DIR" -force >/dev/null 2>&1 || true
+rm -f "$RW_DMG"
+
+# hdiutil create transiently fails "Resource busy" on CI runners while Spotlight is
+# still indexing the freshly copied bundle. Retry a few times before giving up.
+created=""
+for attempt in 1 2 3 4 5; do
+    if hdiutil create -volname "$VOLUME" -srcfolder "$STAGE" -ov \
+        -fs HFS+ -format UDRW -size "${SIZE_MB}m" "$RW_DMG" >/dev/null 2>&1; then
+        created=1
+        break
+    fi
+    echo "    hdiutil create busy (attempt $attempt/5) — retrying…"
+    rm -f "$RW_DMG"
+    sleep 3
+done
+[ -n "$created" ] || { echo "hdiutil create failed after 5 attempts" >&2; exit 1; }
 hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen >/dev/null
 sleep 2
 
