@@ -12,6 +12,8 @@ import SwiftUI
 @MainActor
 final class StripWindowController {
     private var panel: NSPanel?
+    /// The panel's hosting controller, kept so its `rootView` can be swapped in place.
+    private var host: NSHostingController<StripView>?
     private let activator = WorkspaceAppActivator()
 
     /// `touchActive` is passed in rather than read from the driver: this controller has
@@ -26,15 +28,30 @@ final class StripWindowController {
             hide()
             return
         }
+
+        let content = StripView(buttons: configuration.stripButtons,
+                                activator: activator,
+                                fixedRows: configuration.stripRows)
+
         let panel = panel ?? makePanel()
         self.panel = panel
-        // Assign the content BEFORE framing. Setting `contentViewController` makes the
-        // window adopt the content's fitting size, and a SwiftUI view with no intrinsic
-        // size reports zero — collapsing the panel to 0×0. Framing afterwards is what
-        // actually sizes it to the strip.
-        panel.contentViewController = NSHostingController(
-            rootView: StripView(buttons: configuration.stripButtons, activator: activator,
-                                fixedRows: configuration.stripRows))
+
+        if let host {
+            // Reuse the existing hosting controller. Replacing `contentViewController`
+            // on every call stacked a second SwiftUI view over the first — `update()`
+            // fires more than once at launch (start() and the app delegate both call
+            // it) — leaving a faint ghost of the earlier render behind the live one.
+            host.rootView = content
+        } else {
+            let host = NSHostingController(rootView: content)
+            self.host = host
+            // Assign the content BEFORE framing. Setting `contentViewController` makes
+            // the window adopt the content's fitting size, and a SwiftUI view with no
+            // intrinsic size reports zero — collapsing the panel to 0×0. Framing
+            // afterwards is what actually sizes it to the strip.
+            panel.contentViewController = host
+        }
+
         panel.setFrame(frame, display: true)
         panel.orderFrontRegardless()
     }
@@ -42,6 +59,7 @@ final class StripWindowController {
     private func hide() {
         panel?.orderOut(nil)
         panel = nil
+        host = nil
     }
 
     private func makePanel() -> NSPanel {
