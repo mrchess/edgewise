@@ -32,13 +32,19 @@ public struct Configuration: Equatable, Codable, Sendable {
     public var stripRows: Int = 0
     /// After a strip tap activates an app, move the cursor onto that app's window.
     public var stripMovesCursorToApp: Bool = false
+    /// After a strip tap activates an app, briefly flash a highlight over its window so
+    /// you can spot where it landed across several displays.
+    public var stripFlashesApp: Bool = false
+    /// How many times the highlight pulses. One is enough to catch the eye; more is
+    /// harder to miss on a busy display.
+    public var stripFlashCount: Int = 1
 
     public init() {}
 
     enum CodingKeys: String, CodingKey {
         case gesture, displayIdentity, logicalMaxX, logicalMaxY, pinchDelivery,
              restoreCursor, startAtLogin, stripEnabled, stripButtons, stripFraction,
-             stripEdge, stripRows, stripMovesCursorToApp
+             stripEdge, stripRows, stripMovesCursorToApp, stripFlashesApp, stripFlashCount
     }
 
     /// Tolerates a config written by an older Edgewise that lacks keys added since.
@@ -84,6 +90,12 @@ public struct Configuration: Equatable, Codable, Sendable {
         }
         if let v = try container.decodeIfPresent(Bool.self, forKey: .stripMovesCursorToApp) {
             config.stripMovesCursorToApp = v
+        }
+        if let v = try container.decodeIfPresent(Bool.self, forKey: .stripFlashesApp) {
+            config.stripFlashesApp = v
+        }
+        if let v = try container.decodeIfPresent(Int.self, forKey: .stripFlashCount) {
+            config.stripFlashCount = v
         }
         self = config
     }

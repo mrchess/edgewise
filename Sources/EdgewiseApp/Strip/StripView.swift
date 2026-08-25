@@ -16,7 +16,10 @@ struct StripView: View {
                                              fixedRows: fixedRows)
             let columns = Array(repeating: GridItem(.flexible(), spacing: 0),
                                 count: max(layout.columns, 1))
-            LazyVGrid(columns: columns, spacing: 0) {
+            // Space between rows so each icon+label reads as one unit and the gaps fall
+            // *between* buttons, not inside them. Columns already sit far apart — an icon
+            // is only half its cell wide — so only the rows need the extra room.
+            LazyVGrid(columns: columns, spacing: layout.buttonSize * 0.10) {
                 ForEach(buttons) { button in
                     ButtonCell(button: button, edge: layout.buttonSize) {
                         activator.activate(bundleIdentifier: button.bundleIdentifier)
@@ -37,7 +40,10 @@ private struct ButtonCell: View {
     var body: some View {
         let installed = AppCatalog.icon(forBundleIdentifier: button.bundleIdentifier)
         Button(action: onTap) {
-            VStack(spacing: 8) {
+            // Keep the label tight to its icon so the two group as one; the space between
+            // buttons (the grid's row spacing) is what separates them. Scales with the
+            // button so it stays proportional at every strip size.
+            VStack(spacing: max(edge * 0.02, 4)) {
                 Group {
                     if let icon = installed {
                         Image(nsImage: icon).resizable()

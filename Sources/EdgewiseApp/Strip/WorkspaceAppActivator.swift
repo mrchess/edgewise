@@ -1,6 +1,7 @@
 import AppKit
 import ApplicationServices
 import EdgewiseCore
+import QuartzCore
 
 /// Activates the running instance of an app, or launches it if it is not running.
 ///
@@ -18,6 +19,16 @@ final class WorkspaceAppActivator: AppActivator {
     /// the SwiftUI tap that calls `activate`), so the opt-out is sound here.
     nonisolated(unsafe) var movesCursorToApp = false
 
+    /// When set, a highlight is flashed over the activated app's window — so across
+    /// several displays you can see where the tap sent you. Off by default; the strip
+    /// window controller sets it from configuration. `nonisolated(unsafe)` for the same
+    /// main-actor-only reason as `movesCursorToApp` above.
+    nonisolated(unsafe) var flashesApp = false
+
+    /// How many times the highlight pulses. Clamped to at least one so a stray zero from
+    /// a hand-edited config still shows something. Main-actor-only, as above.
+    nonisolated(unsafe) var flashCount = 1
+
     func activate(bundleIdentifier: String) {
         if let running = NSRunningApplication
             .runningApplications(withBundleIdentifier: bundleIdentifier).first {
@@ -26,6 +37,7 @@ final class WorkspaceAppActivator: AppActivator {
             // the Dock — so a tap on a fully minimised app would appear to do nothing.
             restoreIfAllMinimised(pid: running.processIdentifier)
             if movesCursorToApp { moveCursorToWindow(of: running.processIdentifier) }
+            if flashesApp { flashWindow(of: running.processIdentifier) }
             return
         }
         guard let url = NSWorkspace.shared
@@ -64,29 +76,87 @@ final class WorkspaceAppActivator: AppActivator {
         }
     }
 
-    /// Warps the cursor to the centre of the app's frontmost window.
-    ///
-    /// Reads the window's position and size through the Accessibility API — the same
-    /// grant the driver already holds — and both those and `CGWarpMouseCursorPosition`
-    /// work in the top-left global coordinate space, so no flip is needed. Fails quietly
-    /// if the app exposes no reachable window.
-    private func moveCursorToWindow(of pid: pid_t) {
+    /// The frame of the app's frontmost window, in the top-left global coordinate space
+    /// the Accessibility API and Core Graphics share. Nil if the app exposes no reachable
+    /// window. Reading it needs the same accessibility grant the driver already holds.
+    private func frontWindowFrame(of pid: pid_t) -> CGRect? {
         let app = AXUIElementCreateApplication(pid)
         let windowValue = attribute(app, kAXFocusedWindowAttribute as String)
             ?? attribute(app, kAXMainWindowAttribute as String)
-        guard let windowValue else { return }
+        guard let windowValue else { return nil }
         let window = windowValue as! AXUIElement
 
         guard let posValue = attribute(window, kAXPositionAttribute as String),
-              let sizeValue = attribute(window, kAXSizeAttribute as String) else { return }
+              let sizeValue = attribute(window, kAXSizeAttribute as String) else { return nil }
 
         var position = CGPoint.zero
         var size = CGSize.zero
         AXValueGetValue(posValue as! AXValue, .cgPoint, &position)
         AXValueGetValue(sizeValue as! AXValue, .cgSize, &size)
-        guard size.width > 0, size.height > 0 else { return }
+        guard size.width > 0, size.height > 0 else { return nil }
+        return CGRect(origin: position, size: size)
+    }
 
-        CGWarpMouseCursorPosition(CGPoint(x: position.x + size.width / 2,
-                                          y: position.y + size.height / 2))
+    /// Warps the cursor to the centre of the app's frontmost window. `CGWarpMouseCursorPosition`
+    /// works in the same top-left global space as the frame, so no flip is needed.
+    private func moveCursorToWindow(of pid: pid_t) {
+        guard let frame = frontWindowFrame(of: pid) else { return }
+        CGWarpMouseCursorPosition(CGPoint(x: frame.midX, y: frame.midY))
+    }
+
+    /// Flashes a highlight over the app's frontmost window so it is easy to find.
+    ///
+    /// Lays a borderless, click-through panel exactly over the window and pulses its
+    /// border a couple of times before removing it. The window frame comes back in the
+    /// top-left global space, so it is flipped into AppKit's bottom-left space the same
+    /// way the strip's own panel is. The work is dispatched to the main queue: it creates
+    /// AppKit views, and the panel is kept alive by the timing closure until it closes.
+    private func flashWindow(of pid: pid_t) {
+        DispatchQueue.main.async { [self] in
+            guard let frame = frontWindowFrame(of: pid) else { return }
+            let mainHeight = CGDisplayBounds(CGMainDisplayID()).height
+            let cocoa = NSRect(x: frame.minX, y: mainHeight - frame.maxY,
+                               width: frame.width, height: frame.height)
+
+            let panel = NSPanel(contentRect: cocoa,
+                                styleMask: [.borderless, .nonactivatingPanel],
+                                backing: .buffered, defer: false)
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.hasShadow = false
+            panel.ignoresMouseEvents = true
+            // Above the app it is pointing at, and present on the current Space and over a
+            // full-screen window so the highlight is not trapped on another desktop.
+            panel.level = .screenSaver
+            panel.collectionBehavior = [.canJoinAllSpaces, .stationary,
+                                        .fullScreenAuxiliary, .ignoresCycle]
+
+            let view = NSView(frame: NSRect(origin: .zero, size: cocoa.size))
+            view.wantsLayer = true
+            let layer = view.layer!
+            layer.borderColor = NSColor.controlAccentColor.cgColor
+            layer.borderWidth = 6
+            layer.cornerRadius = 12
+            layer.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor
+            panel.contentView = view
+            panel.orderFrontRegardless()
+
+            // Each fade reads as one blink; the layer rests invisible so there is no
+            // solid frame left on screen when the panel is finally ordered out.
+            let count = max(1, flashCount)
+            let step = 0.35
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 1.0
+            pulse.toValue = 0.0
+            pulse.duration = step
+            pulse.repeatCount = Float(count)
+            pulse.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            layer.add(pulse, forKey: "flash")
+            layer.opacity = 0
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + step * Double(count) + 0.05) {
+                panel.orderOut(nil)
+            }
+        }
     }
 }
