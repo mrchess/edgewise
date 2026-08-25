@@ -75,6 +75,10 @@ struct StripSettingsView: View {
                     ForEach(1...4, id: \.self) { n in Text("\(n)").tag(n) }
                 }
 
+                Toggle("Move the cursor to the app you tap", isOn: Binding(
+                    get: { driver.configuration.stripMovesCursorToApp },
+                    set: { driver.configuration.stripMovesCursorToApp = $0 }))
+
                 // An edge is meaningless when the strip fills the panel, so the side
                 // picker only appears once a fraction has been chosen.
                 if driver.configuration.stripFraction != .full {

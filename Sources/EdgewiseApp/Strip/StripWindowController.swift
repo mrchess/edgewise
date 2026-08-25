@@ -29,6 +29,8 @@ final class StripWindowController {
             return
         }
 
+        activator.movesCursorToApp = configuration.stripMovesCursorToApp
+
         let content = StripView(buttons: configuration.stripButtons,
                                 activator: activator,
                                 fixedRows: configuration.stripRows)
