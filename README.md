@@ -52,8 +52,9 @@ on their own.
 </p>
 
 Optionally, tapping an icon moves the cursor onto the app it brings forward — so you land
-on it, pointer and all. It activates the app and stops there — it does not try to place
-the caret in a text box.
+on it, pointer and all — or flashes a brief highlight over its window so you can see where
+it landed across several displays. Either way it activates the app and stops there — it
+does not try to place the caret in a text box.
 That was tried and abandoned deliberately: the apps people reach for either focus their
 own input on activation or hide it behind a `contenteditable` no accessibility walk can
 find. See the

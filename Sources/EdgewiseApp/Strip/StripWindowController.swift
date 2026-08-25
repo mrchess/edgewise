@@ -30,6 +30,8 @@ final class StripWindowController {
         }
 
         activator.movesCursorToApp = configuration.stripMovesCursorToApp
+        activator.flashesApp = configuration.stripFlashesApp
+        activator.flashCount = configuration.stripFlashCount
 
         let content = StripView(buttons: configuration.stripButtons,
                                 activator: activator,

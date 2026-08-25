@@ -5,6 +5,7 @@ struct StripSettingsView: View {
     @EnvironmentObject private var driver: DriverController
 
     var body: some View {
+        // The apps themselves: the on/off switch and the list you tap.
         Section("Strip") {
             Toggle("Show an app strip on the panel", isOn: Binding(
                 get: { driver.configuration.stripEnabled },
@@ -57,7 +58,13 @@ struct StripSettingsView: View {
                             StripButton(bundleIdentifier: app.bundleIdentifier, title: app.name))
                     }
                 }
+            }
+        }
 
+        // Where the strip sits and how the buttons are arranged. Only meaningful once the
+        // strip is on, so the layout and tap groups appear together with it.
+        if driver.configuration.stripEnabled {
+            Section("Layout") {
                 Picker("Size", selection: Binding(
                     get: { driver.configuration.stripFraction },
                     set: { driver.configuration.stripFraction = $0 })) {
@@ -75,12 +82,7 @@ struct StripSettingsView: View {
                     ForEach(1...4, id: \.self) { n in Text("\(n)").tag(n) }
                 }
 
-                Toggle("Move the cursor to the app you tap", isOn: Binding(
-                    get: { driver.configuration.stripMovesCursorToApp },
-                    set: { driver.configuration.stripMovesCursorToApp = $0 }))
-
-                // An edge is meaningless when the strip fills the panel, so the side
-                // picker only appears once a fraction has been chosen.
+                // A side is meaningless when the strip fills the panel.
                 if driver.configuration.stripFraction != .full {
                     Picker("Side", selection: Binding(
                         get: { driver.configuration.stripEdge },
@@ -89,6 +91,27 @@ struct StripSettingsView: View {
                         Text("Right").tag(StripEdge.trailing)
                     }
                     .pickerStyle(.segmented)
+                }
+            }
+
+            Section("When you tap an app") {
+                Toggle("Move the cursor to the app", isOn: Binding(
+                    get: { driver.configuration.stripMovesCursorToApp },
+                    set: { driver.configuration.stripMovesCursorToApp = $0 }))
+
+                Toggle("Flash the app", isOn: Binding(
+                    get: { driver.configuration.stripFlashesApp },
+                    set: { driver.configuration.stripFlashesApp = $0 }))
+
+                // How many pulses only matters once the flash is on.
+                if driver.configuration.stripFlashesApp {
+                    Picker("Flashes", selection: Binding(
+                        get: { driver.configuration.stripFlashCount },
+                        set: { driver.configuration.stripFlashCount = $0 })) {
+                        Text("Once").tag(1)
+                        Text("Twice").tag(2)
+                        Text("Three times").tag(3)
+                    }
                 }
             }
         }

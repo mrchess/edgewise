@@ -5,6 +5,20 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-08-24
+
+### Added
+
+- Flash the app you tap: an optional highlight briefly pulses over the app's window so you
+  can spot where it landed across several displays. Pick one, two or three pulses.
+
+### Changed
+
+- The strip's settings are grouped into **Strip** (the apps), **Layout** (size, rows,
+  side) and **When you tap an app** (cursor and flash), so related controls sit together.
+- Tightened each strip icon to its label and opened up the space between buttons, so every
+  app reads as a single unit rather than a floating icon and caption.
+
 ## [0.2.3] - 2026-08-24
 
 ### Fixed
