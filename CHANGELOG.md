@@ -5,6 +5,13 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-08-24
+
+### Fixed
+
+- Tapping a strip button now restores an app whose windows are all minimized to the Dock.
+  Bringing the app forward alone left them minimized, so the tap appeared to do nothing.
+
 ## [0.2.2] - 2026-08-24
 
 ### Added
