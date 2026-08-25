@@ -47,7 +47,13 @@ left/right half, third, quarter or eighth of it — leaving the rest as ordinary
 you can still touch — and lay the buttons out in a fixed number of rows or let them wrap
 on their own.
 
-It activates the app and stops there — it does not try to place the caret in a text box.
+<p align="center">
+  <img src="docs/images/strip-sizes.png" width="760" alt="The same apps shown as the strip takes the whole panel, then its right half, third and eighth — the buttons re-flowing into more rows as the strip narrows, with the rest of the panel left as desktop">
+</p>
+
+Optionally, tapping an icon moves the cursor onto the app it brings forward — so you land
+on it, pointer and all. It activates the app and stops there — it does not try to place
+the caret in a text box.
 That was tried and abandoned deliberately: the apps people reach for either focus their
 own input on activation or hide it behind a `contenteditable` no accessibility walk can
 find. See the

@@ -30,13 +30,15 @@ public struct Configuration: Equatable, Codable, Sendable {
     /// Fixed number of button rows. Zero means lay them out automatically, wrapping
     /// only when a single row would make the buttons too narrow.
     public var stripRows: Int = 0
+    /// After a strip tap activates an app, move the cursor onto that app's window.
+    public var stripMovesCursorToApp: Bool = false
 
     public init() {}
 
     enum CodingKeys: String, CodingKey {
         case gesture, displayIdentity, logicalMaxX, logicalMaxY, pinchDelivery,
              restoreCursor, startAtLogin, stripEnabled, stripButtons, stripFraction,
-             stripEdge, stripRows
+             stripEdge, stripRows, stripMovesCursorToApp
     }
 
     /// Tolerates a config written by an older Edgewise that lacks keys added since.
@@ -79,6 +81,9 @@ public struct Configuration: Equatable, Codable, Sendable {
         }
         if let v = try container.decodeIfPresent(Int.self, forKey: .stripRows) {
             config.stripRows = v
+        }
+        if let v = try container.decodeIfPresent(Bool.self, forKey: .stripMovesCursorToApp) {
+            config.stripMovesCursorToApp = v
         }
         self = config
     }
