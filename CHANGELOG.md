@@ -5,6 +5,13 @@ All notable changes to Edgewise are recorded here. This project follows
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-24
+
+### Added
+
+- An option, off by default, to move the cursor onto the app you tap on the strip — so
+  you land on it, pointer and all.
+
 ## [0.2.1] - 2026-08-24
 
 ### Added
@@ -78,7 +85,8 @@ Relative to the prior implementations this project draws on:
 - **Cursor warps are followed by an explicit `mouseMoved`**, so apps watching the mouse
   event stream see the cursor arrive before the click.
 
-[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/mrchess/edgewise/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/mrchess/edgewise/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/mrchess/edgewise/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/mrchess/edgewise/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mrchess/edgewise/releases/tag/v0.1.0
